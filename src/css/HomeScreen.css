@@ -1,0 +1,84 @@
+.home-container {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #AFF1FF, #00C0E8);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.settings-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.settingsIcon {
+    width: 28px;
+    height: 28px;
+}
+
+.langSwitch {
+    display: flex;
+    gap: 10px;
+}
+
+.langButton {
+    background: transparent;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.activeLangButton {
+    background: #00CCFF;
+    border-color: #00CCFF;
+}
+
+.content {
+    flex: 1;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.title {
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.subtitle {
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 30px;
+}
+
+.micContainer {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.micButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.micImage {
+    width: 120px;
+    height: 120px;
+}
+
+.hintText {
+    font-size: 16px;
+    color: #fff;
+}

@@ -1,0 +1,112 @@
+.welcome-container {
+    height: 100vh;
+    display: flex;
+    background: linear-gradient(180deg, #A2EEFF, #02BDFE);
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    padding: 50px 0;
+}
+
+.title {
+    font-size: 34px;
+    font-weight: bold;
+    color: #FFF;
+    text-align: center;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.logo-container {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-wrapper {
+    width: 200px;
+    height: 200px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.shape {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border-radius: 25px;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.description-container {
+    padding: 0 20px;
+}
+
+.description-text {
+    font-size: 18px;
+    color: #FFF;
+    font-weight: 500;
+    text-align: center;
+    line-height: 24px;
+}
+
+.button-container {
+    width: 85%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.regButton {
+    background-color: #00CCFF;
+    padding: 16px;
+    border-radius: 12px;
+    color: #FFF;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1.2px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.regButton:hover {
+    background-color: #00aadd;
+}
+
+.loginButton {
+    background-color: transparent;
+    padding: 16px;
+    border-radius: 12px;
+    color: #FFF;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1.2px;
+    border: 2px solid #FFF;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.loginButton:hover {
+    background-color: rgba(255,255,255,0.1);
+}
