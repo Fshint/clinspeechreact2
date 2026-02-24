@@ -1,6 +1,6 @@
 .home-container {
     min-height: 100vh;
-    background: linear-gradient(180deg, #AFF1FF, #00C0E8);
+    background: linear-gradient(160deg, #e0f7fa 0%, #b2ebf2 30%, #00BCD4 70%, #00838f 100%);
     display: flex;
     flex-direction: column;
 }
@@ -8,77 +8,114 @@
 .header {
     display: flex;
     justify-content: space-between;
-    padding: 20px;
+    align-items: center;
+    padding: 16px 20px;
 }
 
 .settings-btn {
-    background: none;
+    background: rgba(255,255,255,0.2);
     border: none;
     cursor: pointer;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.settings-btn:hover {
+    background: rgba(255,255,255,0.35);
 }
 
 .settingsIcon {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
 }
 
 .langSwitch {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .langButton {
-    background: transparent;
-    border: 2px solid #fff;
-    border-radius: 8px;
-    padding: 6px 12px;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 10px;
+    padding: 6px 14px;
     color: #fff;
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 13px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.langButton:hover {
+    background: rgba(255,255,255,0.25);
 }
 
 .activeLangButton {
-    background: #00CCFF;
-    border-color: #00CCFF;
+    background: rgba(255,255,255,0.3);
+    border-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .content {
     flex: 1;
     text-align: center;
-    padding: 40px 20px;
+    padding: 20px 20px 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .title {
-    font-size: 32px;
-    font-weight: bold;
+    font-size: 28px;
+    font-weight: 700;
     color: #fff;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    line-height: 1.3;
 }
 
 .subtitle {
-    font-size: 18px;
-    color: #fff;
-    margin-bottom: 30px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 40px;
+    line-height: 1.5;
 }
 
 .micContainer {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .micButton {
     background: none;
     border: none;
     cursor: pointer;
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.15));
+}
+
+.micButton:hover {
+    transform: scale(1.08);
+}
+
+.micButton:active {
+    transform: scale(0.95);
 }
 
 .micImage {
-    width: 120px;
-    height: 120px;
+    width: 130px;
+    height: 130px;
 }
 
 .hintText {
-    font-size: 16px;
-    color: #fff;
+    font-size: 15px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.5;
 }

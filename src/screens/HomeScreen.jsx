@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IoSettingsOutline } from 'react-icons/io5';
+import { useAuth } from '../context/AuthContext';
+import { MainButton } from '../assets';
 import '../css/HomeScreen.css';
 
 export default function HomeScreen() {
     const [language, setLanguage] = useState('RUS');
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    const displayName = user
+        ? (user.first_name || user.full_name || user.username)
+        : 'Доктор';
 
     return (
         <div className="home-container">
             {/* HEADER */}
             <div className="header">
                 <button className="settings-btn" onClick={() => navigate('/settings')}>
-                    <img src="/assets/settings.png" alt="settings" className="settingsIcon" />
+                    <IoSettingsOutline size={24} color="#fff" />
                 </button>
 
                 <div className="langSwitch">
@@ -32,14 +40,14 @@ export default function HomeScreen() {
 
             {/* CONTENT */}
             <div className="content">
-                <h1 className="title">Добро пожаловать,<br/>Доктор [Имя]!</h1>
+                <h1 className="title">Добро пожаловать,<br/>Доктор {displayName}!</h1>
                 <p className="subtitle">
                     Начните свой первый<br/>прием, чтобы создать отчет
                 </p>
 
                 <div className="micContainer">
                     <button className="micButton" onClick={() => navigate('/record')}>
-                        <img src="/assets/Main_Button.png" alt="mic" className="micImage" />
+                        <img src={MainButton} alt="mic" className="micImage" />
                     </button>
                 </div>
 

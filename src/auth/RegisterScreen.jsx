@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import '../css/RegisterScreen.css';
 import AppLogo from '../assets/App_logo.png';
+import { authAPI } from '../api/apiClient';
+import { useAuth } from '../context/AuthContext';
 
-const BRAND_CYAN = '#00CCFF';
 const TOTAL_STEPS = 7;
 
 const SPECIALIZATIONS = [
@@ -16,8 +18,13 @@ const SPECIALIZATIONS = [
 ];
 
 export default function RegisterScreen() {
+    const navigate = useNavigate();
+    const { loginWithCode } = useAuth();
     const [role, setRole] = useState(null);
     const [step, setStep] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiError, setApiError] = useState('');
+    const codeRefs = useRef([]);
     const [form, setForm] = useState({
         lastName: '',
         firstName: '',
@@ -29,7 +36,7 @@ export default function RegisterScreen() {
         documentType: '',
         documentFile: null,
         email: '',
-        code: ['', '', '', ''],
+        code: ['', '', '', '', '', ''],
         password: '',
         confirmPassword: ''
     });
@@ -65,8 +72,73 @@ export default function RegisterScreen() {
         }
     };
 
-    const nextStep = () => {
-        if (step < TOTAL_STEPS) setStep(prev => prev + 1);
+    const nextStep = async () => {
+        if (step >= TOTAL_STEPS) return;
+        setApiError('');
+        setIsLoading(true);
+
+        try {
+            // Шаг 4 → 5: отправить OTP код на email
+            if (step === 4) {
+                await authAPI.sendCode(form.email);
+            }
+
+            // Шаг 6 → 7: регистрируем + автоматически логинимся через OTP
+            if (step === 6) {
+                // 1. Регистрируем пользователя
+                await authAPI.register({
+                    username: form.email.split('@')[0],
+                    email: form.email,
+                    password: form.password,
+                    first_name: form.firstName,
+                    last_name: form.lastName,
+                    middle_name: form.middleName,
+                    role: 'doctor',
+                    phone: '',
+                });
+
+                // 2. Верифицируем OTP код + автоматический вход
+                const otpCode = form.code.join('');
+                try {
+                    await loginWithCode(form.email, otpCode);
+                    // Успешно вошли — переходим на главную
+                    navigate('/main', { replace: true });
+                    return;
+                } catch (loginErr) {
+                    // OTP мог истечь — не критично, пользователь может войти через логин
+                    console.warn('Auto-login failed, user can login manually', loginErr);
+                }
+            }
+
+            setStep(prev => prev + 1);
+        } catch (err) {
+            const msg = err.response?.data;
+            if (typeof msg === 'object') {
+                const errors = Object.values(msg).flat().join('. ');
+                setApiError(errors || 'Ошибка запроса');
+            } else {
+                setApiError(msg?.error || msg?.detail || 'Ошибка подключения к серверу');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCodeChange = (index, value) => {
+        if (value.length > 1) value = value.slice(-1);
+        const newCode = [...form.code];
+        newCode[index] = value;
+        setForm(prev => ({ ...prev, code: newCode }));
+        // Автофокус на следующее поле
+        if (value && index < 5) {
+            codeRefs.current[index + 1]?.focus();
+        }
+    };
+
+    const handleCodeKeyDown = (index, e) => {
+        if (e.key === 'Backspace' && !form.code[index] && index > 0) {
+            codeRefs.current[index - 1]?.focus();
+        }
     };
 
     const renderCodeInputs = () => (
@@ -74,15 +146,13 @@ export default function RegisterScreen() {
             {form.code.map((digit, index) => (
                 <input
                     key={index}
+                    ref={el => codeRefs.current[index] = el}
                     className="codeInput"
                     type="text"
                     maxLength={1}
                     value={digit}
-                    onChange={e => {
-                        const newCode = [...form.code];
-                        newCode[index] = e.target.value;
-                        setForm(prev => ({ ...prev, code: newCode }));
-                    }}
+                    onChange={e => handleCodeChange(index, e.target.value)}
+                    onKeyDown={e => handleCodeKeyDown(index, e)}
                 />
             ))}
         </div>
@@ -156,7 +226,10 @@ export default function RegisterScreen() {
                 {step === 4 && (
                     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
                         <h2 className="selectionTitle">Электронная почта</h2>
-                        <input className="input" placeholder="example@mail.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                        <p style={{ color: '#aaa', fontSize: 14, marginBottom: 10 }}>
+                            На указанную почту будет отправлен 6-значный код подтверждения
+                        </p>
+                        <input className="input" placeholder="example@mail.com" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                     </motion.div>
                 )}
 
@@ -164,9 +237,13 @@ export default function RegisterScreen() {
                 {step === 5 && (
                     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
                         <h2 className="selectionTitle">Код подтверждения</h2>
+                        <p style={{ color: '#aaa', fontSize: 14, marginBottom: 10 }}>
+                            Введите 6-значный код, отправленный на {form.email}
+                        </p>
                         {renderCodeInputs()}
                     </motion.div>
                 )}
+
                 {/* STEP 6 */}
                 {step === 6 && (
                     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
@@ -192,14 +269,12 @@ export default function RegisterScreen() {
                     </motion.div>
                 )}
 
-                {/* STEP 7 */}
+                {/* STEP 7 — показывается только если auto-login не сработал */}
                 {step === 7 && (
                     <div style={{ textAlign: 'center', marginTop: 50 }}>
-                        <h2 className="selectionTitle">Заявка отправлена</h2>
-                        <div className="loader"></div>
+                        <h2 className="selectionTitle">Регистрация успешна!</h2>
                         <p className="finalText">
-                            Мы отправили ваши данные на проверку.
-                            Ожидайте подтверждение на почте.
+                            Ваш аккаунт создан. Войдите с вашим email и паролем.
                         </p>
                     </div>
                 )}
@@ -207,7 +282,19 @@ export default function RegisterScreen() {
                 {/* Кнопка "ДАЛЕЕ" */}
                 {step <= 6 && canProceed() && (
                     <div className="buttonContainer">
-                        <button className="roleButton" onClick={nextStep}>ДАЛЕЕ</button>
+                        {apiError && <p style={{ color: '#E74C3C', textAlign: 'center', marginBottom: 10 }}>{apiError}</p>}
+                        <button className="roleButton" onClick={nextStep} disabled={isLoading}>
+                            {isLoading ? 'ЗАГРУЗКА...' : (step === 6 ? 'ЗАРЕГИСТРИРОВАТЬСЯ' : 'ДАЛЕЕ')}
+                        </button>
+                    </div>
+                )}
+
+                {/* Шаг 7: кнопка "Войти" */}
+                {step === 7 && (
+                    <div className="buttonContainer">
+                        <button className="roleButton" onClick={() => navigate('/login')}>
+                            ВОЙТИ
+                        </button>
                     </div>
                 )}
             </div>

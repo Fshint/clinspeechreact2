@@ -1,7 +1,7 @@
 .welcome-container {
     height: 100vh;
     display: flex;
-    background: linear-gradient(180deg, #A2EEFF, #02BDFE);
+    background: linear-gradient(160deg, #e0f7fa 0%, #00BCD4 40%, #00838f 100%);
 }
 
 .content {
@@ -10,16 +10,16 @@
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
-    padding: 50px 0;
+    padding: 60px 24px;
 }
 
 .title {
-    font-size: 34px;
-    font-weight: bold;
+    font-size: 32px;
+    font-weight: 800;
     color: #FFF;
     text-align: center;
     letter-spacing: 0.5px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
 .logo-container {
@@ -38,6 +38,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.15));
 }
 
 .logo {
@@ -51,7 +52,7 @@
     width: 50px;
     height: 50px;
     border-radius: 25px;
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.18);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -63,50 +64,57 @@
 }
 
 .description-text {
-    font-size: 18px;
-    color: #FFF;
+    font-size: 17px;
+    color: rgba(255,255,255,0.92);
     font-weight: 500;
     text-align: center;
-    line-height: 24px;
+    line-height: 1.6;
 }
 
 .button-container {
     width: 85%;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 14px;
 }
 
 .regButton {
-    background-color: #00CCFF;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
     padding: 16px;
-    border-radius: 12px;
+    border-radius: 14px;
     color: #FFF;
     font-size: 16px;
-    font-weight: bold;
-    letter-spacing: 1.2px;
-    border: none;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1.5px solid rgba(255,255,255,0.3);
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s;
 }
 
 .regButton:hover {
-    background-color: #00aadd;
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
 }
 
 .loginButton {
-    background-color: transparent;
+    background: transparent;
     padding: 16px;
-    border-radius: 12px;
-    color: #FFF;
+    border-radius: 14px;
+    color: rgba(255,255,255,0.9);
     font-size: 16px;
-    font-weight: bold;
-    letter-spacing: 1.2px;
-    border: 2px solid #FFF;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border: 1.5px solid rgba(255,255,255,0.35);
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s;
 }
 
 .loginButton:hover {
-    background-color: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.5);
+    color: #fff;
 }

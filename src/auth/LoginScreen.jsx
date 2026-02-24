@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../css/LoginScreen.css';
 import AppLogo from '../assets/App_logo.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
+    const navigate = useNavigate();
+    const { login, isAuthenticated } = useAuth();
 
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [attempts, setAttempts] = useState(0);
     const [error, setError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [locked, setLocked] = useState(false);
     const [timer, setTimer] = useState(30);
+    const [isLoading, setIsLoading] = useState(false);
 
     const MAX_ATTEMPTS = 3;
     const LOCK_TIME = 30;
+
+    // Если уже авторизован — перейти на главную
+    useEffect(() => {
+        if (isAuthenticated) navigate('/main', { replace: true });
+    }, [isAuthenticated, navigate]);
 
     useEffect(() => {
         let interval;
@@ -33,22 +45,35 @@ export default function LoginScreen() {
         return () => clearInterval(interval);
     }, [locked, timer]);
 
-    const handleLogin = () => {
-        if (locked) return;
+    const handleLogin = async () => {
+        if (locked || isLoading) return;
 
-        const correctPassword = "123456"; // временно для теста
+        setIsLoading(true);
+        setError(false);
+        setErrorMessage('');
 
-        if (password !== correctPassword) {
+        try {
+            // Backend ожидает username, но email тоже можно использовать как username
+            await login(email, password);
+            navigate('/main', { replace: true });
+        } catch (err) {
             const newAttempts = attempts + 1;
             setAttempts(newAttempts);
             setError(true);
 
+            if (err.response?.status === 401) {
+                setErrorMessage('Неверный логин или пароль.');
+            } else if (err.response?.data?.detail) {
+                setErrorMessage(err.response.data.detail);
+            } else {
+                setErrorMessage('Ошибка подключения к серверу.');
+            }
+
             if (newAttempts >= MAX_ATTEMPTS) {
                 setLocked(true);
             }
-        } else {
-            setError(false);
-            alert("Успешный вход");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -72,8 +97,10 @@ export default function LoginScreen() {
                     <input
                         className="input"
                         type="email"
-                        placeholder="example@mail.com"
-                        disabled={locked}
+                        placeholder="Логин или email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        disabled={locked || isLoading}
                     />
 
                     <div className="passwordWrapper">
@@ -83,7 +110,7 @@ export default function LoginScreen() {
                             placeholder="Введите ваш пароль"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
-                            disabled={locked}
+                            disabled={locked || isLoading}
                         />
 
                         <span
@@ -96,7 +123,7 @@ export default function LoginScreen() {
 
                     {!locked && error && (
                         <p className="errorText">
-                            Пароль неверный. Аккаунт будет временно заблокирован после трёх неудачных попыток авторизации.
+                            {errorMessage || 'Ошибка входа.'}
                             <br />
                             Осталось попыток: {MAX_ATTEMPTS - attempts}
                         </p>
@@ -120,9 +147,9 @@ export default function LoginScreen() {
                     <button
                         className="roleButton"
                         onClick={handleLogin}
-                        disabled={locked}
+                        disabled={locked || isLoading}
                     >
-                        ВОЙТИ
+                        {isLoading ? 'ВХОД...' : 'ВОЙТИ'}
                     </button>
                 </div>
             </div>

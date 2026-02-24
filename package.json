@@ -10,6 +10,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.13.5",
     "expo-av": "^16.0.8",
     "expo-linear-gradient": "^15.0.8",
     "framer-motion": "^12.34.3",

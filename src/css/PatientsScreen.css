@@ -1,0 +1,238 @@
+.patients-container {
+    min-height: 100vh;
+    background: var(--bg);
+    padding: 16px 16px 90px;
+}
+
+.patients-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.patients-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.addPatientBtn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,191,255,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.addPatientBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 18px rgba(0,191,255,0.4);
+}
+
+.searchInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #d4e9f0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fff;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,191,255,0.15);
+}
+
+.patientItem {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.patientItem:hover {
+    transform: translateY(-2px);
+}
+
+.patientAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+    color: var(--primary-dark);
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 14px;
+}
+
+.patientInfo {
+    flex: 1;
+}
+
+.patientName {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.patientMeta {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.patientActions {
+    display: flex;
+    gap: 8px;
+}
+
+.patientActionBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.patientActionBtn:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+}
+
+.modalContent {
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modalTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.modalInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #d4e9f0;
+    border-radius: 12px;
+    font-size: 15px;
+    margin-bottom: 14px;
+    background: #fff;
+    transition: border-color 0.2s;
+}
+
+.modalInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,191,255,0.15);
+}
+
+.modalActions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.modalBtnPrimary {
+    flex: 1;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.modalBtnPrimary:hover {
+    box-shadow: 0 4px 16px rgba(0,191,255,0.3);
+}
+
+.modalBtnPrimary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.modalBtnSecondary {
+    flex: 1;
+    padding: 13px;
+    background: #f0f2f5;
+    color: var(--text);
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modalBtnSecondary:hover {
+    background: #e4e6e9;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.emptyStateIcon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+}
+
+.emptyStateText {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.emptyStateHint {
+    font-size: 14px;
+    opacity: 0.7;
+}

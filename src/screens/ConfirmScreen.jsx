@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import { motion } from 'framer-motion';
+import { MainButton } from '../assets';
 import '../css/ConfirmScreen.css';
 
 export default function RecordPage() {
@@ -89,7 +90,7 @@ export default function RecordPage() {
                     />
                 ))}
 
-                <img src="/assets/Main_Button.png" alt="Main Button" className="button" />
+                <img src={MainButton} alt="Main Button" className="button" />
             </div>
         </div>
     );
