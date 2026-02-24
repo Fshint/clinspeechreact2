@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import '../css/RegisterScreen.css';
+import AppLogo from '../assets/App_logo.png';
 
 const BRAND_CYAN = '#00CCFF';
 const TOTAL_STEPS = 7;
@@ -219,7 +220,7 @@ export default function RegisterScreen() {
             <div className="headerContainer">
                 <div className="headerBackground">
                     <div className="logoWrapper">
-                        <img src="/assets/App_logo.png" alt="logo" className="miniLogo" />
+                        <img src={AppLogo} alt="logo" className="miniLogo" />
                         <h1 className="headerTitle">ClinSpeech</h1>
                     </div>
                 </div>

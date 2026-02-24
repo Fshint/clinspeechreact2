@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeartbeat, faStethoscope, faBriefcaseMedical } from '@fortawesome/free-solid-svg-icons';
 import { faDna, faPills, faMicroscope } from '@fortawesome/free-solid-svg-icons';
 import '../css/WelcomeScreen.css';
+import AppIcon from '../assets/App_icon.png';
 
 const FloatingShape = ({ icon, index }) => {
     const angle = (index * 60) * (Math.PI / 180);
@@ -57,7 +58,7 @@ export default function WelcomeScreen() {
                     ))}
 
                     <div className="image-wrapper">
-                        <img src="../assets/App_icon.png" alt="App Logo" className="logo" />
+                        <img src={AppIcon} alt="App Logo" className="logo" />
                     </div>
                 </div>
 

@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 .login-container {
     background: #fff;
     min-height: 100vh;
@@ -80,4 +84,65 @@
 
 .loginButton:hover {
     background: #0099CC;
+}
+
+.loginForm {
+    width: 100%;
+    max-width: 400px;
+}
+
+.passwordWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.passwordWrapper .input {
+    padding-right: 45px;
+}
+
+.eyeIcon {
+    position: absolute;
+    right: 15px;
+    top: 35%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    display: flex;
+    align-items: center;
+}
+
+.forgotText {
+    font-size: 13px;
+    color: #333;
+    margin-top: -10px;
+    margin-bottom: 30px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.inputError {
+    border: 1px solid #ff4d4f;
+}
+
+/* Тексты ошибок */
+.errorText,
+.lockText {
+    color: #ff4d4f;
+    font-size: 13px;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+.roleButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.input {
+    width: 100%;
+    border: 1px solid #00CCFF;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 16px;
+    margin-bottom: 20px;
 }
