@@ -95,6 +95,8 @@ export const patientsAPI = {
   delete: (id) => api.delete(`/patients/${id}/`),
   attach: (patientId) => api.post('/patients/attach/', { patient_id: patientId }),
   getHistory: (id) => api.get(`/patients/${id}/history/`),
+  getPatientUsers: () => api.get('/patients/patient_users/'),
+  fromUser: (data) => api.post('/patients/from_user/', data),
 };
 
 // ═══ CONSULTATIONS ═══
