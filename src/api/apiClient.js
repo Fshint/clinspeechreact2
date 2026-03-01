@@ -3,246 +3,187 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api';
 
 const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Interceptor: автоматически добавляет Authorization заголовок ───
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+// Request interceptor — attach JWT token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+}, (error) => Promise.reject(error));
 
-// ─── Interceptor: автоматический refresh токена при 401 ───
+// Response interceptor — auto-refresh on 401
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-    failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve(token);
-        }
-    });
-    failedQueue = [];
+  failedQueue.forEach((p) => error ? p.reject(error) : p.resolve(token));
+  failedQueue = [];
 };
 
 api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            if (isRefreshing) {
-                return new Promise((resolve, reject) => {
-                    failedQueue.push({ resolve, reject });
-                }).then((token) => {
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
-                    return api(originalRequest);
-                });
-            }
-
-            originalRequest._retry = true;
-            isRefreshing = true;
-
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (!refreshToken) {
-                isRefreshing = false;
-                // Нет refresh токена — выход
-                localStorage.clear();
-                window.location.href = '/login';
-                return Promise.reject(error);
-            }
-
-            try {
-                const { data } = await axios.post(`${API_URL}/auth/refresh/`, {
-                    refresh: refreshToken,
-                });
-                localStorage.setItem('access_token', data.access);
-                processQueue(null, data.access);
-                originalRequest.headers.Authorization = `Bearer ${data.access}`;
-                return api(originalRequest);
-            } catch (refreshError) {
-                processQueue(refreshError, null);
-                localStorage.clear();
-                window.location.href = '/login';
-                return Promise.reject(refreshError);
-            } finally {
-                isRefreshing = false;
-            }
-        }
-
+  (res) => res,
+  async (error) => {
+    const req = error.config;
+    if (error.response?.status === 401 && !req._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          req.headers.Authorization = `Bearer ${token}`;
+          return api(req);
+        });
+      }
+      req._retry = true;
+      isRefreshing = true;
+      const refresh = localStorage.getItem('refresh_token');
+      if (!refresh) {
+        isRefreshing = false;
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(error);
+      }
+      try {
+        const { data } = await axios.post(`${API_URL}/auth/refresh/`, { refresh });
+        localStorage.setItem('access_token', data.access);
+        processQueue(null, data.access);
+        req.headers.Authorization = `Bearer ${data.access}`;
+        return api(req);
+      } catch (e) {
+        processQueue(e, null);
+        localStorage.clear();
+        window.location.href = '/login';
+        return Promise.reject(e);
+      } finally {
+        isRefreshing = false;
+      }
     }
+    return Promise.reject(error);
+  }
 );
 
-// ═══════════════════════════════════════════════════════════════
-//  AUTH
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ AUTH ═══
 export const authAPI = {
-    /** Вход по username + password */
-    login: (username, password) =>
-        api.post('/auth/login/', { username, password }),
-
-    /** Регистрация нового пользователя */
-    register: (userData) =>
-        api.post('/register/', userData),
-
-    /** Отправить OTP-код на email */
-    sendCode: (email) =>
-        api.post('/send-code/', { email }),
-
-    /** Вход по email + OTP-код */
-    loginWithCode: (email, code) =>
-        api.post('/login-code/', { email, code }),
-
-    /** Обновить access токен */
-    refreshToken: (refresh) =>
-        api.post('/auth/refresh/', { refresh }),
-
-    /** Выход (инвалидация refresh) */
-    logout: () => {
-        const refresh = localStorage.getItem('refresh_token');
-        return api.post('/auth/logout/', refresh ? { refresh } : {});
-    },
-
-    /** Смена пароля */
-    changePassword: (oldPassword, newPassword) =>
-        api.post('/auth/change-password/', {
-            old_password: oldPassword,
-            new_password: newPassword,
-        }),
+  login: (username, password) => api.post('/auth/login/', { username, password }),
+  register: (data) => api.post('/register/', data),
+  sendCode: (email) => api.post('/send-code/', { email }),
+  loginWithCode: (email, code) => api.post('/login-code/', { email, code }),
+  refreshToken: (refresh) => api.post('/auth/refresh/', { refresh }),
+  logout: () => {
+    const refresh = localStorage.getItem('refresh_token');
+    return api.post('/auth/logout/', refresh ? { refresh } : {});
+  },
+  changePassword: (old_password, new_password) =>
+    api.post('/auth/change-password/', { old_password, new_password }),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  USER / PROFILE
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ USER / PROFILE ═══
 export const userAPI = {
-    /** Текущий пользователь */
-    getMe: () => api.get('/me/'),
-
-    /** Обновить профиль */
-    updateMe: (data) => api.patch('/me/', data),
-
-    /** Статистика/дашборд */
-    getStats: () => api.get('/stats/'),
+  getMe: () => api.get('/me/'),
+  updateMe: (data) => api.patch('/me/', data),
+  getStats: () => api.get('/stats/'),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  PATIENTS
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ PATIENTS ═══
 export const patientsAPI = {
-    getAll: (params) => api.get('/patients/', { params }),
-    getById: (id) => api.get(`/patients/${id}/`),
-    create: (data) => api.post('/patients/', data),
-    update: (id, data) => api.patch(`/patients/${id}/`, data),
-    delete: (id) => api.delete(`/patients/${id}/`),
-    attach: (patientId) => api.post('/patients/attach/', { patient_id: patientId }),
+  getAll: (params) => api.get('/patients/', { params }),
+  getById: (id) => api.get(`/patients/${id}/`),
+  create: (data) => api.post('/patients/', data),
+  update: (id, data) => api.patch(`/patients/${id}/`, data),
+  delete: (id) => api.delete(`/patients/${id}/`),
+  attach: (patientId) => api.post('/patients/attach/', { patient_id: patientId }),
+  getHistory: (id) => api.get(`/patients/${id}/history/`),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  CONSULTATIONS
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ CONSULTATIONS ═══
 export const consultationsAPI = {
-    getAll: (params) => api.get('/consultations/', { params }),
-    getById: (id) => api.get(`/consultations/${id}/`),
-
-    /** Создать новую консультацию (multipart — аудио + изображения) */
-    create: (formData) =>
-        api.post('/consultations/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        }),
-
-    update: (id, data) => api.patch(`/consultations/${id}/`, data),
-    delete: (id) => api.delete(`/consultations/${id}/`),
-
-    /** Изменить статус */
-    updateStatus: (id, statusValue) =>
-        api.patch(`/consultations/${id}/status/`, { status: statusValue }),
-
-    /** Перегенерировать отчёт */
-    regenerate: (id) =>
-        api.post(`/consultations/${id}/regenerate/`),
-
-    /** Поделиться консультацией */
-    share: (id, userId, message) =>
-        api.post(`/consultations/${id}/share/`, {
-            shared_with: userId,
-            message,
-        }),
-
-    /** Запустить ИИ-обработку (транскрибация + генерация отчёта) */
-    startProcessing: (id) =>
-        api.post(`/consultations/${id}/start_processing/`),
-
-    /** Получить статус обработки и список снимков */
-    getProcessingStatus: (id) =>
-        api.get(`/consultations/${id}/start_processing/`),
-
-    /** Редактировать отчёт */
-    editReport: (id, data) =>
-        api.patch(`/consultations/${id}/edit_report/`, data),
-
-    /** Скачать PDF */
-    downloadPDF: (id) =>
-        api.get(`/consultations/${id}/download_pdf/`, { responseType: 'blob' }),
-
-    /** Экспорт в CSV */
-    exportCSV: (params) =>
-        api.get('/consultations/export/', { params, responseType: 'blob' }),
+  getAll: (params) => api.get('/consultations/', { params }),
+  getById: (id) => api.get(`/consultations/${id}/`),
+  create: (formData) => api.post('/consultations/', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, data) => api.patch(`/consultations/${id}/`, data),
+  delete: (id) => api.delete(`/consultations/${id}/`),
+  updateStatus: (id, status) => api.patch(`/consultations/${id}/status/`, { status }),
+  regenerate: (id) => api.post(`/consultations/${id}/regenerate/`),
+  share: (id, shared_with, message) => api.post(`/consultations/${id}/share/`, { shared_with, message }),
+  getShares: (id) => api.get(`/consultations/${id}/share/`),
+  startProcessing: (id) => api.post(`/consultations/${id}/start_processing/`),
+  getProcessingStatus: (id) => api.get(`/consultations/${id}/start_processing/`),
+  editReport: (id, data) => api.patch(`/consultations/${id}/edit_report/`, data),
+  downloadPDF: (id) => api.get(`/consultations/${id}/download_pdf/`, { responseType: 'blob' }),
+  getReportHistory: (id) => api.get(`/consultations/${id}/report_history/`),
+  exportCSV: (params) => api.get('/consultations/export/', { params, responseType: 'blob' }),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  ANALYSIS IMAGES
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ ANALYSIS IMAGES ═══
 export const imagesAPI = {
-    getByConsultation: (consultationId) =>
-        api.get('/analysis-images/', { params: { consultation: consultationId } }),
-    upload: (consultationId, file, description) => {
-        const formData = new FormData();
-        formData.append('consultation', consultationId);
-        formData.append('image', file);
-        if (description) formData.append('description', description);
-        return api.post('/analysis-images/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-    },
-    delete: (id) => api.delete(`/analysis-images/${id}/`),
+  getByConsultation: (consultationId) => api.get('/analysis-images/', { params: { consultation: consultationId } }),
+  upload: (consultationId, file, description) => {
+    const fd = new FormData();
+    fd.append('consultation', consultationId);
+    fd.append('image', file);
+    if (description) fd.append('description', description);
+    return api.post('/analysis-images/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  delete: (id) => api.delete(`/analysis-images/${id}/`),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  APPOINTMENTS
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ APPOINTMENTS ═══
 export const appointmentsAPI = {
-    getAll: (params) => api.get('/appointments/', { params }),
-    create: (data) => api.post('/appointments/', data),
-    update: (id, data) => api.patch(`/appointments/${id}/`, data),
-    delete: (id) => api.delete(`/appointments/${id}/`),
+  getAll: (params) => api.get('/appointments/', { params }),
+  create: (data) => api.post('/appointments/', data),
+  update: (id, data) => api.patch(`/appointments/${id}/`, data),
+  delete: (id) => api.delete(`/appointments/${id}/`),
+  getToday: () => api.get('/appointments/today/'),
+  getUpcoming: () => api.get('/appointments/upcoming/'),
+  cancel: (id) => api.post(`/appointments/${id}/cancel/`),
+  complete: (id) => api.post(`/appointments/${id}/complete/`),
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  NOTIFICATIONS
-// ═══════════════════════════════════════════════════════════════
-
+// ═══ NOTIFICATIONS ═══
 export const notificationsAPI = {
-    getAll: () => api.get('/notifications/'),
-    markRead: (id) => api.post(`/notifications/${id}/mark_read/`),
-    markAllRead: () => api.post('/notifications/mark_all_read/'),
+  getAll: () => api.get('/notifications/'),
+  markRead: (id) => api.post(`/notifications/${id}/mark_read/`),
+  markAllRead: () => api.post('/notifications/mark_all_read/'),
+  getUnreadCount: () => api.get('/notifications/unread_count/'),
+};
+
+// ═══ TEMPLATES ═══
+export const templatesAPI = {
+  getAll: (params) => api.get('/templates/', { params }),
+  getById: (id) => api.get(`/templates/${id}/`),
+  create: (data) => api.post('/templates/', data),
+  update: (id, data) => api.patch(`/templates/${id}/`, data),
+  delete: (id) => api.delete(`/templates/${id}/`),
+  apply: (id, consultationId) => api.post(`/templates/${id}/apply/`, { consultation_id: consultationId }),
+};
+
+// ═══ DIAGNOSES (ICD-10) ═══
+export const diagnosesAPI = {
+  search: (params) => api.get('/diagnoses/', { params }),
+};
+
+// ═══ ADMIN ═══
+export const adminAPI = {
+  getUsers: (params) => api.get('/users/', { params }),
+  updateUser: (id, data) => api.patch(`/users/${id}/`, data),
+  activateUser: (id) => api.post(`/users/${id}/activate/`),
+  deactivateUser: (id) => api.post(`/users/${id}/deactivate/`),
+  getAuditLog: (params) => api.get('/audit-log/', { params }),
+  getMonthlyReport: (params) => api.get('/reports/monthly/', { params }),
+};
+
+// ═══ FEEDBACK ═══
+export const feedbackAPI = {
+  getAll: () => api.get('/feedback/'),
+  create: (data) => api.post('/feedback/', data),
+  getStats: () => api.get('/feedback/stats/'),
+};
+
+// ═══ ORGANIZATIONS ═══
+export const organizationsAPI = {
+  getAll: () => api.get('/organizations/'),
 };
 
 export default api;
