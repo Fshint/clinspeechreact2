@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userAPI, authAPI } from '../api/apiClient';
 
@@ -20,7 +20,7 @@ export default function ProfilePage() {
     try {
       const { data } = await userAPI.getMe();
       setProfile(data);
-      setForm({ first_name: data.first_name, last_name: data.last_name, middle_name: data.middle_name || '', phone: data.phone || '' });
+      setForm({ first_name: data.first_name, last_name: data.last_name, middle_name: data.middle_name || '', phone: data.phone || '', specialization: data.specialization || '' });
     } catch {} finally { setLoading(false); }
   };
 
@@ -98,6 +98,7 @@ export default function ProfilePage() {
                 { label: 'Телефон', val: profile?.phone || '—' },
                 { label: 'Email', val: profile?.email },
                 { label: 'Организация', val: profile?.organization_name || '—' },
+                ...(profile?.role === 'doctor' ? [{ label: 'Специализация', val: profile?.specialization || '—' }] : []),
               ].map(({ label, val }) => (
                 <div key={label}>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
@@ -130,6 +131,12 @@ export default function ProfilePage() {
               <label className="input-label">Телефон</label>
               <input className="input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
             </div>
+            {profile?.role === 'doctor' && (
+              <div className="input-group" style={{ marginTop: 12 }}>
+                <label className="input-label">Специализация</label>
+                <input className="input" value={form.specialization} onChange={e => setForm({ ...form, specialization: e.target.value })} placeholder="Например: Терапевт, Кардиолог..." />
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Сохранение...' : 'Сохранить'}</button>
               <button className="btn btn-secondary" type="button" onClick={() => { setEditing(false); setError(''); }}>Отмена</button>
