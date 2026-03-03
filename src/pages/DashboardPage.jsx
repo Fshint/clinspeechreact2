@@ -101,14 +101,14 @@ export default function DashboardPage() {
               <AreaChart data={activityData}>
                 <defs>
                   <linearGradient id="gradActivity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="count" stroke="#6366f1" fill="url(#gradActivity)" strokeWidth={2} name="Консультаций" />
+                <Area type="monotone" dataKey="count" stroke="#06b6d4" fill="url(#gradActivity)" strokeWidth={2} name="Консультаций" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} name="Кол-во" />
+                <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Кол-во" />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -130,19 +130,10 @@ export default function RecordPage() {
         <div><h1 className="page-title">Новая запись</h1><p className="page-subtitle">Запишите приём и создайте ИИ-отчёт</p></div>
       </div>
 
-      {/* Steps */}
-      <div className="record-steps">
-        {[1, 2, 3].map(s => (
-          <div key={s} className={`record-step ${step >= s ? 'active' : ''}`}>
-            <div className="step-number">{s}</div>
-            <span>{{ 1: 'Пациент', 2: 'Запись', 3: 'Отправка' }[s]}</span>
-          </div>
-        ))}
-      </div>
+
 
       {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      {/* Step 1: Patient */}
       {step === 1 && (
         <div className="card" style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Выберите пациента</h3>
