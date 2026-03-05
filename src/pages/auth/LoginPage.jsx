@@ -58,6 +58,12 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <div className="animated-bg">
+        <span className="blob blob1"></span>
+        <span className="blob blob2"></span>
+        <span className="blob blob3"></span>
+        <span className="blob blob4"></span>
+      </div>
       <div className="auth-card animate-slideup">
         <div className="auth-logo">
           <h1>ClinSpeech</h1>

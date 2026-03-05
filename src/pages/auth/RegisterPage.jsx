@@ -61,6 +61,12 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
+      <div className="animated-bg">
+        <span className="blob blob1"></span>
+        <span className="blob blob2"></span>
+        <span className="blob blob3"></span>
+        <span className="blob blob4"></span>
+      </div>
       <div className="auth-card animate-slideup" style={{ maxWidth: 480 }}>
         <div className="auth-logo">
           <h1>ClinSpeech</h1>

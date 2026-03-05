@@ -54,6 +54,12 @@ export default function Layout() {
   return (
     <div className="app-layout">
       <nav className="sidebar">
+        <div className="animated-bg">
+          <span className="blob blob1"></span>
+          <span className="blob blob2"></span>
+          <span className="blob blob3"></span>
+          <span className="blob blob4"></span>
+        </div>
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">
             <img src={AppIcon} alt="App Logo" width={35} height={35}/>

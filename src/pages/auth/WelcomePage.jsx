@@ -1,28 +1,40 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import logoImg from '../../assets/Logo.png';
 
 export default function WelcomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="welcome-page">
-      <div className="welcome-logo">
-        Clin<span>Speech</span>
-      </div>
-      <p className="welcome-desc">
-        ИИ-платформа для медицинского документооборота.
-        Запишите приём — получите готовый отчёт за минуту.
-      </p>
-      <div className="welcome-btns">
-        <button className="welcome-btn welcome-btn-primary" onClick={() => navigate('/login')}>
-          Войти в систему
-        </button>
-        <button className="welcome-btn welcome-btn-secondary" onClick={() => navigate('/register')}>
-          Регистрация
-        </button>
-      </div>
+      <div className="welcome-page">
 
-      <div className="welcome-features">
+        <div className="animated-bg">
+          <span className="blob blob1"></span>
+          <span className="blob blob2"></span>
+          <span className="blob blob3"></span>
+          <span className="blob blob4"></span>
+        </div>
+
+        <img src={logoImg} alt="ClinSpeech Logo" className="welcome-page-logo-img" />
+        <div className="welcome-logo">
+          Clin<span>Speech</span>
+        </div>
+
+        <p className="welcome-desc">
+          ИИ-платформа для медицинского документооборота.
+          Запишите приём — получите готовый отчёт за минуту.
+        </p>
+
+        <div className="welcome-btns">
+          <button className="welcome-btn welcome-btn-primary" onClick={() => navigate('/login')}>
+            Войти в систему
+          </button>
+          <button className="welcome-btn welcome-btn-secondary" onClick={() => navigate('/register')}>
+            Регистрация
+          </button>
+        </div>
+
+        <div className="welcome-features">
         <div className="welcome-feature">
           <div className="welcome-feature-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
