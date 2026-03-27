@@ -15,12 +15,19 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import TemplatesPage from './pages/TemplatesPage';
 import ProfilePage from './pages/ProfilePage';
+import ChatPage from './pages/ChatPage';
 import UsersPage from './pages/admin/UsersPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
 
 function DoctorAdminRoute({ children }) {
   const { user } = useAuth();
   if (user?.role === 'patient') return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+function PatientRoute({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== 'patient') return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -40,6 +47,7 @@ export default function App() {
             <Route path="/patients" element={<DoctorAdminRoute><PatientsPage /></DoctorAdminRoute>} />
             <Route path="/appointments" element={<DoctorAdminRoute><AppointmentsPage /></DoctorAdminRoute>} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/chat" element={<PatientRoute><ChatPage /></PatientRoute>} />
             <Route path="/templates" element={<DoctorAdminRoute><TemplatesPage /></DoctorAdminRoute>} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin/users" element={<UsersPage />} />

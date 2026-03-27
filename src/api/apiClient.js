@@ -184,6 +184,12 @@ export const feedbackAPI = {
 };
 
 // ═══ ORGANIZATIONS ═══
+export const chatAPI = {
+  getHistory: () => api.get('/chat/'),
+  sendMessage: (message) => api.post('/chat/', { message }),
+  clearHistory: () => api.delete('/chat/clear/'),
+};
+
 export const organizationsAPI = {
   getAll: () => api.get('/organizations/'),
 };
