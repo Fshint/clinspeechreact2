@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { notificationsAPI } from '../api/apiClient';
+import AppIcon from '../assets/record.png'
 
 /* Inline SVG icons to avoid dependency issues */
 const icons = {
@@ -54,18 +55,26 @@ export default function Layout() {
   return (
     <div className="app-layout">
       <nav className="sidebar">
+        <div className="animated-bg">
+          <span className="blob blob1"></span>
+          <span className="blob blob2"></span>
+          <span className="blob blob3"></span>
+          <span className="blob blob4"></span>
+        </div>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">CS</div>
+          <div className="sidebar-logo-icon">
+            <img src={AppIcon} alt="App Logo" width={35} height={35}/>
+          </div>
           <div className="sidebar-logo-text">Clin<span>Speech</span></div>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-section-label">Основное</div>
           <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.dashboard} Дашборд
+            {icons.dashboard} Дэшборд
           </NavLink>
           {(isDoctor || isAdmin) && (
-            <NavLink to="/record" className="sidebar-link" style={{ color: '#a78bfa' }}>
+            <NavLink to="/record" className="sidebar-link" >
               {icons.mic} Новый приём
             </NavLink>
           )}
@@ -124,18 +133,17 @@ export default function Layout() {
 
         <div className="sidebar-footer">
           <NavLink to="/profile" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.user} Профиль
+            <div className="sidebar-user">
+              <div className="sidebar-avatar">{initials}</div>
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{user?.full_name || user?.username}</div>
+                <div className="sidebar-user-role">{ROLE_LABELS[user?.role] || user?.role}</div>
+              </div>
+            </div>
           </NavLink>
           <button className="sidebar-link" onClick={handleLogout} style={{ color: '#f87171' }}>
             {icons.logout} Выйти
           </button>
-          <div className="sidebar-user">
-            <div className="sidebar-avatar">{initials}</div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{user?.full_name || user?.username}</div>
-              <div className="sidebar-user-role">{ROLE_LABELS[user?.role] || user?.role}</div>
-            </div>
-          </div>
         </div>
       </nav>
 

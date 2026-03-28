@@ -73,7 +73,7 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--primary), #a78bfa)',
+            background: 'linear-gradient(135deg, var(--primary), #67e8f9)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 28, fontWeight: 700, color: '#fff'
           }}>
@@ -143,15 +143,6 @@ export default function ProfilePage() {
             </div>
           </form>
         )}
-      </div>
-
-      {/* Logout */}
-      <div className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Выход из системы</div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Завершить текущую сессию</div>
-        </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Выйти из аккаунта?')) logout(); }}>Выйти</button>
       </div>
 
       {/* Password modal */}

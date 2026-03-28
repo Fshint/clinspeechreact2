@@ -1,36 +1,118 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { patientsAPI, consultationsAPI } from '../api/apiClient';
+import logoImg from '../assets/Main_Button.png';
 
 export default function RecordPage() {
   const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(true);
   const [patientId, setPatientId] = useState('');
   const [patientSearch, setPatientSearch] = useState('');
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
   const [duration, setDuration] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
   const [autoProcess, setAutoProcess] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const mediaRef = useRef(null);
   const timerRef = useRef(null);
   const chunksRef = useRef([]);
   const canvasRef = useRef(null);
   const analyserRef = useRef(null);
   const animRef = useRef(null);
+  const audioRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const audioAnalyserRef = useRef(null);
+  const eqAnimRef = useRef(null);
+  const eqCanvasRef = useRef(null);
+  const waveCvsRef = useRef(null);
+  const waveAnimRef = useRef(null);
 
   useEffect(() => {
+    setLoadingPatients(true);
     patientsAPI.getAll().then(({ data }) => {
       setPatients(Array.isArray(data) ? data : (data?.results || []));
-    });
-    return () => { cancelAnimationFrame(animRef.current); clearInterval(timerRef.current); };
+    }).finally(() => setLoadingPatients(false));
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      cancelAnimationFrame(eqAnimRef.current);
+      cancelAnimationFrame(waveAnimRef.current);
+      clearInterval(timerRef.current);
+    };
   }, []);
 
   const filteredPatients = patients.filter(p =>
     `${p.last_name} ${p.first_name} ${p.middle_name || ''}`.toLowerCase().includes(patientSearch.toLowerCase())
   );
+
+  /* ── NCS-style circular sphere visualizer ── */
+  const drawWaves = useCallback(() => {
+    const canvas = waveCvsRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const S = canvas.width;
+    const cx = S / 2;
+    const cy = S / 2;
+    let t = 0;
+
+    const layers = [
+      { color: 'rgba(46,196,182,0.5)',  fill: 'rgba(46,196,182,0.05)', lw: 2.5, amp: 12, fm: 5,  sp: 1.4 },
+      { color: 'rgba(94,234,212,0.4)',   fill: 'rgba(94,234,212,0.04)', lw: 2,   amp: 16, fm: 6,  sp: 1.1 },
+      { color: 'rgba(167,139,250,0.3)',  fill: 'rgba(167,139,250,0.03)', lw: 1.5, amp: 9,  fm: 8,  sp: 1.7 },
+      { color: 'rgba(45,212,191,0.4)',   fill: 'rgba(45,212,191,0.04)', lw: 2,   amp: 14, fm: 7,  sp: 0.9 },
+    ];
+    const baseR = 72;
+    const pts = 220;
+
+    const render = () => {
+      waveAnimRef.current = requestAnimationFrame(render);
+      t += 0.01;
+      ctx.clearRect(0, 0, S, S);
+
+      let freqData = null;
+      if (analyserRef.current) {
+        freqData = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(freqData);
+      }
+
+      layers.forEach((l, w) => {
+        const phase = t * l.sp + w * 1.2;
+        ctx.beginPath();
+        for (let i = 0; i <= pts; i++) {
+          const a = (i / pts) * Math.PI * 2;
+          let p = Math.sin(a * l.fm + phase) * l.amp
+                + Math.sin(a * l.fm * 2.3 + phase * 1.4) * (l.amp * 0.4)
+                + Math.cos(a * l.fm * 0.7 + phase * 0.6) * (l.amp * 0.3);
+          if (freqData) {
+            const fi = Math.floor((i / pts) * freqData.length) % freqData.length;
+            p += (freqData[fi] / 255) * 35;
+          }
+          const x = cx + Math.cos(a) * (baseR + p);
+          const y = cy + Math.sin(a) * (baseR + p);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = l.color;
+        ctx.lineWidth = l.lw;
+        ctx.stroke();
+        ctx.fillStyle = l.fill;
+        ctx.fill();
+      });
+    };
+    render();
+  }, []);
+
+  useEffect(() => {
+    if (step === 2 && !audioBlob) {
+      drawWaves();
+    }
+    return () => cancelAnimationFrame(waveAnimRef.current);
+  }, [step, audioBlob, drawWaves]);
 
   const startRecording = async () => {
     setError('');
@@ -42,6 +124,7 @@ export default function RecordPage() {
       analyser.fftSize = 256;
       source.connect(analyser);
       analyserRef.current = analyser;
+      audioCtxRef.current = ctx;
 
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       chunksRef.current = [];
@@ -49,6 +132,7 @@ export default function RecordPage() {
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach(t => t.stop());
         ctx.close();
         cancelAnimationFrame(animRef.current);
@@ -56,11 +140,27 @@ export default function RecordPage() {
       mr.start(250);
       mediaRef.current = mr;
       setRecording(true);
+      setPaused(false);
       setDuration(0);
       timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
-      drawWaveform();
     } catch (err) {
-      setError('Не удалось получить доступ к микрофону. Проверьте разрешения.');
+      setError('Не удалось получить доступ к микрофону.');
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRef.current && mediaRef.current.state === 'recording') {
+      mediaRef.current.pause();
+      setPaused(true);
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRef.current && mediaRef.current.state === 'paused') {
+      mediaRef.current.resume();
+      setPaused(false);
+      timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
     }
   };
 
@@ -69,36 +169,69 @@ export default function RecordPage() {
       mediaRef.current.stop();
     }
     setRecording(false);
+    setPaused(false);
     clearInterval(timerRef.current);
+    cancelAnimationFrame(waveAnimRef.current);
   };
 
-  const drawWaveform = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const analyser = analyserRef.current;
-    if (!analyser) return;
+  /* ── Equalizer animation for playback ── */
+  const startEqualizer = useCallback(() => {
+    const audio = audioRef.current;
+    const canvas = eqCanvasRef.current;
+    if (!audio || !canvas) return;
+
+    if (!audioAnalyserRef.current) {
+      const ctx = new AudioContext();
+      const src = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      src.connect(analyser);
+      analyser.connect(ctx.destination);
+      audioAnalyserRef.current = analyser;
+    }
+    const analyser = audioAnalyserRef.current;
     const bufLen = analyser.frequencyBinCount;
     const data = new Uint8Array(bufLen);
+    const cCtx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const barCount = bufLen;
+    const barW = W / barCount - 2;
 
     const draw = () => {
-      animRef.current = requestAnimationFrame(draw);
+      eqAnimRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(data);
-      ctx.fillStyle = 'rgba(248,250,252,1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const barW = (canvas.width / bufLen) * 2.5;
-      let x = 0;
-      for (let i = 0; i < bufLen; i++) {
-        const h = (data[i] / 255) * canvas.height * 0.8;
-        const gradient = ctx.createLinearGradient(0, canvas.height - h, 0, canvas.height);
-        gradient.addColorStop(0, '#6366f1');
-        gradient.addColorStop(1, '#a78bfa');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, canvas.height - h, barW - 1, h);
-        x += barW;
+      cCtx.clearRect(0, 0, W, H);
+
+      for (let i = 0; i < barCount; i++) {
+        const h = (data[i] / 255) * H * 0.9;
+        const x = i * (barW + 2);
+        const gradient = cCtx.createLinearGradient(x, H - h, x, H);
+        gradient.addColorStop(0, '#2ec4b6');
+        gradient.addColorStop(1, '#5eead4');
+        cCtx.fillStyle = gradient;
+        cCtx.beginPath();
+        cCtx.roundRect(x, H - h, barW, h, 2);
+        cCtx.fill();
       }
     };
     draw();
+  }, []);
+
+  const handlePlay = () => {
+    if (audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+      startEqualizer();
+    }
+  };
+
+  const handlePause = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      cancelAnimationFrame(eqAnimRef.current);
+    }
   };
 
   const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -122,116 +255,170 @@ export default function RecordPage() {
     } finally { setUploading(false); }
   };
 
-  const reset = () => { setAudioBlob(null); setDuration(0); };
+  const reset = () => {
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setDuration(0);
+    setIsPlaying(false);
+    cancelAnimationFrame(eqAnimRef.current);
+    audioAnalyserRef.current = null;
+  };
 
   return (
-    <div className="animate-fade">
-      <div className="page-header">
-        <div><h1 className="page-title">Новая запись</h1><p className="page-subtitle">Запишите приём и создайте ИИ-отчёт</p></div>
-      </div>
+    <div className="shazam-page animate-fade">
 
-      {/* Steps */}
-      <div className="record-steps">
-        {[1, 2, 3].map(s => (
-          <div key={s} className={`record-step ${step >= s ? 'active' : ''}`}>
-            <div className="step-number">{s}</div>
-            <span>{{ 1: 'Пациент', 2: 'Запись', 3: 'Отправка' }[s]}</span>
-          </div>
-        ))}
-      </div>
-
-      {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
-
-      {/* Step 1: Patient */}
+      {/* ── Step 1: Patient select ── */}
       {step === 1 && (
-        <div className="card" style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Выберите пациента</h3>
-          <div className="input-group" style={{ marginBottom: 16 }}>
-            <input className="input" placeholder="Поиск по ФИО..." value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
+        <div className="shazam-step1">
+          <div className="page-header">
+            <div><h1 className="page-title">Новая запись</h1><p className="page-subtitle">Выберите пациента для начала</p></div>
           </div>
-          <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {filteredPatients.map(p => (
-              <div key={p.id}
-                className={`card ${patientId === String(p.id) ? 'selected' : ''}`}
-                style={{ padding: '10px 14px', cursor: 'pointer', border: patientId === String(p.id) ? '2px solid var(--primary)' : '1px solid var(--border)', transition: 'all .2s' }}
-                onClick={() => setPatientId(String(p.id))}>
-                <div style={{ fontWeight: 500, fontSize: 14 }}>{p.last_name} {p.first_name} {p.middle_name || ''}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Дата рождения: {p.birth_date || '—'}</div>
-              </div>
-            ))}
-            {filteredPatients.length === 0 && <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Пациенты не найдены</p>}
-          </div>
-          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>Далее →</button>
+          {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
+          <div className="shazam-patient-card">
+            <div className="input-group" style={{ marginBottom: 16 }}>
+              <input className="input" placeholder="Поиск по ФИО..." value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
+            </div>
+            <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {loadingPatients ? (
+                <div className="shazam-loading">Пожалуйста, подождите...</div>
+              ) : filteredPatients.length > 0 ? (
+                filteredPatients.map(p => (
+                  <div key={p.id}
+                    className={`shazam-patient-item ${patientId === String(p.id) ? 'selected' : ''}`}
+                    onClick={() => setPatientId(String(p.id))}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{p.last_name} {p.first_name} {p.middle_name || ''}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Дата рождения: {p.birth_date || '—'}</div>
+                  </div>
+                ))
+              ) : (
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Пациенты не найдены</p>
+              )}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>Далее →</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Step 2: Recording */}
+      {/* ── Step 2: Recording ── */}
       {step === 2 && (
-        <div className="card record-card" style={{ padding: 32, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 24 }}>Запись приёма</h3>
-
-          <canvas ref={canvasRef} width={500} height={120} style={{ width: '100%', height: 120, borderRadius: 'var(--radius)', marginBottom: 24, background: 'var(--bg)' }} />
-
-          <div style={{ fontSize: 48, fontWeight: 300, fontFamily: 'monospace', color: recording ? 'var(--danger)' : 'var(--text)', marginBottom: 24 }}>
-            {formatTime(duration)}
-          </div>
-
+        <div className="shazam-record">
           {!audioBlob ? (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-              {!recording ? (
-                <button className="btn btn-danger btn-lg" onClick={startRecording} style={{ borderRadius: 999, width: 80, height: 80 }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" strokeWidth="2"/><line x1="12" x2="12" y1="19" y2="22" stroke="currentColor" strokeWidth="2"/></svg>
+            <>
+              {/* Timer */}
+              <div className="shazam-timer">{formatTime(duration)}</div>
+
+              {/* Center logo button with sphere visualizer */}
+              <div className="shazam-center">
+                <canvas ref={waveCvsRef} width={400} height={400} className="shazam-sphere-canvas" />
+                {recording && (
+                  <>
+                    <span className="shazam-ring shazam-ring1"></span>
+                    <span className="shazam-ring shazam-ring2"></span>
+                    <span className="shazam-ring shazam-ring3"></span>
+                  </>
+                )}
+                <button
+                  className={`shazam-logo-btn ${recording ? 'recording' : ''}`}
+                  onClick={!recording ? startRecording : undefined}
+                  disabled={recording}
+                >
+                  <img src={logoImg} alt="Record" />
                 </button>
-              ) : (
-                <button className="btn btn-secondary btn-lg" onClick={stopRecording} style={{ borderRadius: 999, width: 80, height: 80 }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                </button>
+              </div>
+
+              <p className="shazam-hint">{recording ? (paused ? 'На паузе' : 'Идёт запись...') : 'Нажмите для начала записи'}</p>
+
+              {/* Bottom controls */}
+              {recording && (
+                <div className="shazam-controls">
+                  <button className="shazam-ctrl-btn" onClick={paused ? resumeRecording : pauseRecording}>
+                    {paused ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    )}
+                    <span>{paused ? 'Продолжить' : 'Пауза'}</span>
+                  </button>
+                  <button className="shazam-ctrl-btn stop" onClick={stopRecording}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    <span>Остановить</span>
+                  </button>
+                </div>
               )}
-            </div>
+            </>
           ) : (
-            <div>
-              <audio controls src={URL.createObjectURL(audioBlob)} style={{ width: '100%', marginBottom: 16 }} />
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-                <button className="btn btn-secondary" onClick={reset}>Перезаписать</button>
-                <button className="btn btn-primary" onClick={() => setStep(3)}>Далее →</button>
+            /* ── After recording: playback + equalizer ── */
+            <div className="shazam-playback">
+              <div className="shazam-timer">{formatTime(duration)}</div>
+
+              <canvas ref={eqCanvasRef} width={320} height={100} className="shazam-eq-canvas" />
+
+              <audio
+                ref={audioRef}
+                src={audioUrl}
+                onEnded={() => { setIsPlaying(false); cancelAnimationFrame(eqAnimRef.current); }}
+                style={{ display: 'none' }}
+              />
+
+              <div className="shazam-play-controls">
+                {!isPlaying ? (
+                  <button className="shazam-play-btn" onClick={handlePlay}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  </button>
+                ) : (
+                  <button className="shazam-play-btn" onClick={handlePause}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                  </button>
+                )}
+              </div>
+
+              <div className="shazam-controls">
+                <button className="shazam-ctrl-btn" onClick={reset}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <span>Перезаписать</span>
+                </button>
+                <button className="shazam-ctrl-btn" style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }} onClick={() => setStep(3)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  <span>Далее</span>
+                </button>
               </div>
             </div>
           )}
 
-          <div style={{ marginTop: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>← Назад</button>
-          </div>
+          <button className="shazam-back-btn" onClick={() => { stopRecording(); reset(); setStep(1); }}>← Назад</button>
         </div>
       )}
 
-      {/* Step 3: Submit */}
+      {/* ── Step 3: Submit ── */}
       {step === 3 && (
-        <div className="card" style={{ padding: 32, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 24 }}>Подтверждение</h3>
-
-          <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
-            <div className="card" style={{ padding: 12, textAlign: 'left' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Пациент</div>
-              <div style={{ fontWeight: 500 }}>{(() => { const p = patients.find(p => String(p.id) === patientId); return p ? `${p.last_name} ${p.first_name}` : '—'; })()}</div>
-            </div>
-            <div className="card" style={{ padding: 12, textAlign: 'left' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Длительность записи</div>
-              <div style={{ fontWeight: 500 }}>{formatTime(duration)}</div>
-            </div>
+        <div className="shazam-step1">
+          <div className="page-header">
+            <div><h1 className="page-title">Подтверждение</h1></div>
           </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 14, cursor: 'pointer', marginBottom: 24 }}>
-            <input type="checkbox" checked={autoProcess} onChange={(e) => setAutoProcess(e.target.checked)} />
-            Автоматически запустить ИИ-обработку
-          </label>
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-            <button className="btn btn-secondary" onClick={() => setStep(2)}>← Назад</button>
-            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={uploading}>
-              {uploading ? 'Создание...' : '🚀 Создать консультацию'}
-            </button>
+          {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
+          <div className="shazam-patient-card">
+            <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+              <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Пациент</div>
+                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{(() => { const p = patients.find(p => String(p.id) === patientId); return p ? `${p.last_name} ${p.first_name}` : '—'; })()}</div>
+              </div>
+              <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Длительность записи</div>
+                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{formatTime(duration)}</div>
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 14, cursor: 'pointer', marginBottom: 24, color: 'var(--text-secondary)' }}>
+              <input type="checkbox" checked={autoProcess} onChange={(e) => setAutoProcess(e.target.checked)} />
+              Автоматически запустить ИИ-обработку
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+              <button className="btn btn-secondary" onClick={() => setStep(2)}>← Назад</button>
+              <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={uploading}>
+                {uploading ? 'Создание...' : '🚀 Создать консультацию'}
+              </button>
+            </div>
           </div>
         </div>
       )}
