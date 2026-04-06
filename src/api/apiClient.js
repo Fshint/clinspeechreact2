@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getLocaleCode, getStoredLocale } from '../i18n/localeStorage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api';
 
@@ -7,10 +8,15 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+api.defaults.headers.common['Accept-Language'] = getLocaleCode(getStoredLocale());
+
 // Request interceptor — attach JWT token
 api.interceptors.request.use((config) => {
+  const localeHeader = getLocaleCode(getStoredLocale());
+  config.headers = config.headers || {};
   const token = localStorage.getItem('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['Accept-Language'] = localeHeader;
   return config;
 }, (error) => Promise.reject(error));
 
@@ -46,7 +52,9 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       try {
-        const { data } = await axios.post(`${API_URL}/auth/refresh/`, { refresh });
+        const { data } = await axios.post(`${API_URL}/auth/refresh/`, { refresh }, {
+          headers: { 'Accept-Language': getLocaleCode(getStoredLocale()) },
+        });
         localStorage.setItem('access_token', data.access);
         processQueue(null, data.access);
         req.headers.Authorization = `Bearer ${data.access}`;

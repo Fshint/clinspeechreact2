@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api/apiClient';
+import { useLocale } from '../../context/LocaleContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { t } = useLocale();
   const [step, setStep] = useState(1); // 1=email, 2=code, 3=form
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [form, setForm] = useState({ username: '', password: '', first_name: '', last_name: '', middle_name: '', role: 'doctor', phone: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
 
   const handleSendCode = async (e) => {
     e.preventDefault();
@@ -20,11 +21,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await authAPI.sendCode(email);
-      setCodeSent(true);
       setStep(2);
     } catch (err) {
       const data = err.response?.data;
-      setError(data?.error || 'Не удалось отправить код. Проверьте email.');
+      setError(data?.error || t('auth.emailSendError', 'Не удалось отправить код. Проверьте email.'));
     } finally {
       setLoading(false);
     }
@@ -33,7 +33,7 @@ export default function RegisterPage() {
   const handleVerifyCode = async (e) => {
     e.preventDefault();
     setError('');
-    if (code.length !== 6) { setError('Введите 6-значный код'); return; }
+    if (code.length !== 6) { setError(t('auth.enterSixDigitCode', 'Введите 6-значный код')); return; }
     setStep(3);
   };
 
@@ -43,20 +43,20 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    try {
-      await register({ ...form, email });
-      navigate('/login', { state: { registered: true } });
-    } catch (err) {
-      const data = err.response?.data;
-      if (typeof data === 'object') {
-        const messages = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ');
-        setError(messages);
-      } else {
-        setError('Ошибка регистрации');
+      try {
+        await register({ ...form, email });
+        navigate('/login', { state: { registered: true } });
+      } catch (err) {
+        const data = err.response?.data;
+        if (typeof data === 'object') {
+          const messages = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ');
+          setError(messages);
+        } else {
+          setError(t('auth.registrationError', 'Ошибка регистрации'));
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -70,7 +70,7 @@ export default function RegisterPage() {
       <div className="auth-card animate-slideup" style={{ maxWidth: 480 }}>
         <div className="auth-logo">
           <h1>ClinSpeech</h1>
-          <p>{step === 1 ? 'Подтвердите email' : step === 2 ? 'Введите код' : 'Создать аккаунт'}</p>
+          <p>{step === 1 ? t('auth.confirmEmail', 'Подтвердите email') : step === 2 ? t('auth.enterCode', 'Введите код') : t('auth.createAccount', 'Создать аккаунт')}</p>
         </div>
 
         {/* Step indicators */}
@@ -90,14 +90,14 @@ export default function RegisterPage() {
         {step === 1 && (
           <form className="auth-form" onSubmit={handleSendCode}>
             <div className="input-group">
-              <label className="input-label">Email *</label>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required />
+              <label className="input-label">{t('auth.email', 'Email')} *</label>
+              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder', 'почта@пример.kz')} required />
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              На указанный адрес будет отправлен 6-значный код подтверждения
+              {t('auth.codeSentHint', 'На указанный адрес будет отправлен 6-значный код подтверждения')}
             </p>
             <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-              {loading ? 'Отправка...' : 'Отправить код'}
+              {loading ? t('auth.sending', 'Отправка...') : t('auth.sendCode', 'Отправить код')}
             </button>
           </form>
         )}
@@ -106,25 +106,25 @@ export default function RegisterPage() {
         {step === 2 && (
           <form className="auth-form" onSubmit={handleVerifyCode}>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, textAlign: 'center' }}>
-              Код отправлен на <strong>{email}</strong>
+              {t('auth.codeSentTo', 'Код отправлен на')} <strong>{email}</strong>
             </p>
             <div className="input-group">
-              <label className="input-label">Код подтверждения *</label>
+              <label className="input-label">{t('auth.verificationCode', 'Код подтверждения')} *</label>
               <input
                 className="input"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
+                placeholder={t('auth.codePlaceholder', '000000')}
                 maxLength={6}
                 style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: 600 }}
                 required
               />
             </div>
             <button className="btn btn-primary btn-lg" type="submit" style={{ width: '100%', justifyContent: 'center' }}>
-              Подтвердить
+              {t('auth.confirm', 'Подтвердить')}
             </button>
             <button className="btn btn-ghost" type="button" onClick={() => { setStep(1); setError(''); }} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
-              Изменить email
+              {t('auth.changeEmail', 'Изменить email')}
             </button>
           </form>
         )}
@@ -137,48 +137,48 @@ export default function RegisterPage() {
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="input-group">
-                <label className="input-label">Фамилия *</label>
+                <label className="input-label">{t('profile.lastName', 'Фамилия')} *</label>
                 <input className="input" name="last_name" value={form.last_name} onChange={handleChange} required />
               </div>
               <div className="input-group">
-                <label className="input-label">Имя *</label>
+                <label className="input-label">{t('profile.firstName', 'Имя')} *</label>
                 <input className="input" name="first_name" value={form.first_name} onChange={handleChange} required />
               </div>
             </div>
             <div className="input-group">
-              <label className="input-label">Отчество</label>
+              <label className="input-label">{t('profile.middleName', 'Отчество')}</label>
               <input className="input" name="middle_name" value={form.middle_name} onChange={handleChange} />
             </div>
             <div className="input-group">
-              <label className="input-label">Имя пользователя *</label>
+              <label className="input-label">{t('auth.username', 'Имя пользователя')} *</label>
               <input className="input" name="username" value={form.username} onChange={handleChange} required />
             </div>
             <div className="input-group">
-              <label className="input-label">Телефон</label>
-              <input className="input" name="phone" value={form.phone} onChange={handleChange} placeholder="+7 (___) ___-____" />
+              <label className="input-label">{t('profile.phone', 'Телефон')}</label>
+              <input className="input" name="phone" value={form.phone} onChange={handleChange} placeholder={t('auth.phonePlaceholder', '+7 (___) ___-____')} />
             </div>
             <div className="input-group">
-              <label className="input-label">Роль</label>
+              <label className="input-label">{t('auth.role', 'Роль')}</label>
               <select className="input" name="role" value={form.role} onChange={handleChange}>
-                <option value="doctor">Врач</option>
-                <option value="patient">Пациент</option>
+                <option value="doctor">{t('auth.roleDoctor', 'Врач')}</option>
+                <option value="patient">{t('auth.rolePatient', 'Пациент')}</option>
               </select>
             </div>
             <div className="input-group">
-              <label className="input-label">Пароль *</label>
+              <label className="input-label">{t('auth.password', 'Пароль')} *</label>
               <input className="input" type="password" name="password" value={form.password} onChange={handleChange} minLength={8} required />
             </div>
             <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-              {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+              {loading ? t('auth.registerLoading', 'Регистрация...') : t('auth.registerAction', 'Зарегистрироваться')}
             </button>
             <button className="btn btn-ghost" type="button" onClick={() => { setStep(1); setError(''); }} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
-              Назад
+              {t('auth.back', 'Назад')}
             </button>
           </form>
         )}
 
         <div className="auth-footer">
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
+          {t('auth.haveAccount', 'Уже есть аккаунт?')} <Link to="/login">{t('auth.signIn', 'Войти')}</Link>
         </div>
       </div>
     </div>

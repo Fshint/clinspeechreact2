@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { notificationsAPI } from '../api/apiClient';
+import { useLocale } from '../context/LocaleContext';
 import AppIcon from '../assets/record.png'
 
 /* Inline SVG icons to avoid dependency issues */
@@ -20,11 +21,10 @@ const icons = {
   logout: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
 };
 
-const ROLE_LABELS = { admin: 'Администратор', doctor: 'Врач', patient: 'Пациент' };
-
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -51,6 +51,11 @@ export default function Layout() {
   const isAdmin = user?.role === 'admin';
   const isDoctor = user?.role === 'doctor';
   const isPatient = user?.role === 'patient';
+  const roleLabels = {
+    admin: t('roles.admin', 'Администратор'),
+    doctor: t('roles.doctor', 'Врач'),
+    patient: t('roles.patient', 'Пациент'),
+  };
 
   return (
     <div className="app-layout">
@@ -63,70 +68,70 @@ export default function Layout() {
         </div>
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">
-            <img src={AppIcon} alt="App Logo" width={35} height={35}/>
+            <img src={AppIcon} alt={t('layout.logoAlt', 'Логотип ClinSpeech')} width={35} height={35}/>
           </div>
           <div className="sidebar-logo-text">Clin<span>Speech</span></div>
         </div>
 
         <div className="sidebar-section">
-          <div className="sidebar-section-label">Основное</div>
+          <div className="sidebar-section-label">{t('layout.main', 'Основное')}</div>
           <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.dashboard} Дэшборд
+            {icons.dashboard} {t('layout.dashboard', 'Дэшборд')}
           </NavLink>
           {(isDoctor || isAdmin) && (
             <NavLink to="/record" className="sidebar-link" >
-              {icons.mic} Новый приём
+              {icons.mic} {t('layout.newConsultation', 'Новый приём')}
             </NavLink>
           )}
           <NavLink to="/consultations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.file} {isPatient ? 'Мои консультации' : 'Консультации'}
+            {icons.file} {isPatient ? t('layout.myConsultations', 'Мои консультации') : t('layout.consultations', 'Консультации')}
           </NavLink>
           {!isPatient && (
             <NavLink to="/patients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.users} Пациенты
+              {icons.users} {t('layout.patients', 'Пациенты')}
             </NavLink>
           )}
         </div>
 
         {!isPatient && (
           <div className="sidebar-section">
-            <div className="sidebar-section-label">Планирование</div>
+            <div className="sidebar-section-label">{t('layout.planning', 'Планирование')}</div>
             <NavLink to="/appointments" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.calendar} Расписание
+              {icons.calendar} {t('layout.appointments', 'Расписание')}
             </NavLink>
           </div>
         )}
 
         <div className="sidebar-section">
-          <div className="sidebar-section-label">{isPatient ? 'Прочее' : 'Коммуникации'}</div>
+          <div className="sidebar-section-label">{isPatient ? t('layout.other', 'Прочее') : t('layout.communications', 'Коммуникации')}</div>
           {isPatient && (
             <NavLink to="/chat" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.chat} AI Ассистент
+              {icons.chat} {t('layout.assistant', 'AI Ассистент')}
             </NavLink>
           )}
           <NavLink to="/notifications" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.bell} Уведомления
+            {icons.bell} {t('layout.notifications', 'Уведомления')}
             {unreadCount > 0 && <span className="sidebar-badge">{unreadCount}</span>}
           </NavLink>
         </div>
 
         {(isDoctor || isAdmin) && (
           <div className="sidebar-section">
-            <div className="sidebar-section-label">Инструменты</div>
+            <div className="sidebar-section-label">{t('layout.tools', 'Инструменты')}</div>
             <NavLink to="/templates" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.template} Шаблоны
+              {icons.template} {t('layout.templates', 'Шаблоны')}
             </NavLink>
           </div>
         )}
 
         {isAdmin && (
           <div className="sidebar-section">
-            <div className="sidebar-section-label">Администрирование</div>
+            <div className="sidebar-section-label">{t('layout.administration', 'Администрирование')}</div>
             <NavLink to="/admin/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.shield} Пользователи
+              {icons.shield} {t('layout.users', 'Пользователи')}
             </NavLink>
             <NavLink to="/admin/audit" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              {icons.log} Журнал аудита
+              {icons.log} {t('layout.auditLog', 'Журнал аудита')}
             </NavLink>
           </div>
         )}
@@ -137,12 +142,12 @@ export default function Layout() {
               <div className="sidebar-avatar">{initials}</div>
               <div className="sidebar-user-info">
                 <div className="sidebar-user-name">{user?.full_name || user?.username}</div>
-                <div className="sidebar-user-role">{ROLE_LABELS[user?.role] || user?.role}</div>
+                <div className="sidebar-user-role">{roleLabels[user?.role] || user?.role}</div>
               </div>
             </div>
           </NavLink>
           <button className="sidebar-link" onClick={handleLogout} style={{ color: '#f87171' }}>
-            {icons.logout} Выйти
+            {icons.logout} {t('layout.logout', 'Выйти')}
           </button>
         </div>
       </nav>

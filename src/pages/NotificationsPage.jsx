@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { notificationsAPI } from '../api/apiClient';
+import { useLocale } from '../context/LocaleContext';
 
 export default function NotificationsPage() {
+  const { t, formatDateTime } = useLocale();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,12 +41,12 @@ export default function NotificationsPage() {
     <div className="animate-fade">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Уведомления</h1>
-          <p className="page-subtitle">{unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Все прочитаны'}</p>
+          <h1 className="page-title">{t('notifications.title', 'Уведомления')}</h1>
+          <p className="page-subtitle">{unreadCount > 0 ? t('notifications.unreadCount', '{{count}} непрочитанных', { count: unreadCount }) : t('notifications.allRead', 'Все прочитаны')}</p>
         </div>
         {unreadCount > 0 && (
           <button className="btn btn-secondary" onClick={handleMarkAllRead}>
-            Прочитать все
+            {t('notifications.markAllRead', 'Прочитать все')}
           </button>
         )}
       </div>
@@ -52,8 +54,8 @@ export default function NotificationsPage() {
       {loading ? <div className="loading-spinner" /> : notifications.length === 0 ? (
         <div className="card empty-state">
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
-          <h3>Нет уведомлений</h3>
-          <p>Уведомления появятся здесь</p>
+          <h3>{t('notifications.emptyTitle', 'Нет уведомлений')}</h3>
+          <p>{t('notifications.emptySubtitle', 'Уведомления появятся здесь')}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -71,7 +73,7 @@ export default function NotificationsPage() {
                 <div style={{ fontWeight: n.is_read ? 400 : 600, fontSize: 14 }}>{n.title || n.message}</div>
                 {n.message && n.title && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{n.message}</div>}
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {new Date(n.created_at).toLocaleString('ru-RU')}
+                  {formatDateTime(n.created_at)}
                 </div>
               </div>
               {!n.is_read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 }} />}

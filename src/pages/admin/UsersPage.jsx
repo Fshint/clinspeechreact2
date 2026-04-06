@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api/apiClient';
+import { useLocale } from '../../context/LocaleContext';
 
 export default function UsersPage() {
+  const { t } = useLocale();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('');
@@ -18,15 +20,15 @@ export default function UsersPage() {
   };
 
   const handleActivate = async (id) => {
-    try { await adminAPI.activateUser(id); loadUsers(); } catch { alert('Ошибка'); }
+    try { await adminAPI.activateUser(id); loadUsers(); } catch { alert(t('adminUsers.error', 'Ошибка')); }
   };
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm('Деактивировать пользователя?')) return;
-    try { await adminAPI.deactivateUser(id); loadUsers(); } catch { alert('Ошибка'); }
+    if (!window.confirm(t('adminUsers.deleteConfirm', 'Деактивировать пользователя?'))) return;
+    try { await adminAPI.deactivateUser(id); loadUsers(); } catch { alert(t('adminUsers.error', 'Ошибка')); }
   };
 
-  const roleLabel = { admin: 'Админ', doctor: 'Врач', patient: 'Пациент' };
+  const roleLabel = { admin: t('adminUsers.roleAdmin', 'Админ'), doctor: t('adminUsers.roleDoctor', 'Врач'), patient: t('adminUsers.rolePatient', 'Пациент') };
 
   const filtered = users.filter(u => {
     const matchRole = !roleFilter || u.role === roleFilter;
@@ -37,26 +39,26 @@ export default function UsersPage() {
   return (
     <div className="animate-fade">
       <div className="page-header">
-        <div><h1 className="page-title">Управление пользователями</h1><p className="page-subtitle">{users.length} пользователей</p></div>
+        <div><h1 className="page-title">{t('adminUsers.title', 'Управление пользователями')}</h1><p className="page-subtitle">{t('adminUsers.subtitle', '{{count}} пользователей', { count: users.length })}</p></div>
       </div>
 
       <div className="filter-bar">
         <div className="search-bar" style={{ flex: 1, maxWidth: 320 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input className="input" placeholder="Поиск..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
+          <input className="input" placeholder={t('adminUsers.searchPlaceholder', 'Поиск...')} value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
         </div>
         <select className="input" style={{ width: 160 }} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-          <option value="">Все роли</option>
-          <option value="admin">Админ</option>
-          <option value="doctor">Врач</option>
-          <option value="patient">Пациент</option>
+          <option value="">{t('adminUsers.allRoles', 'Все роли')}</option>
+          <option value="admin">{t('adminUsers.roleAdmin', 'Админ')}</option>
+          <option value="doctor">{t('adminUsers.roleDoctor', 'Врач')}</option>
+          <option value="patient">{t('adminUsers.rolePatient', 'Пациент')}</option>
         </select>
       </div>
 
       {loading ? <div className="loading-spinner" /> : (
         <div className="card table-wrapper">
           <table>
-            <thead><tr><th>ФИО</th><th>Email</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead>
+            <thead><tr><th>{t('adminUsers.name', 'ФИО')}</th><th>{t('adminUsers.email', 'Email')}</th><th>{t('adminUsers.role', 'Роль')}</th><th>{t('adminUsers.status', 'Статус')}</th><th>{t('adminUsers.actions', 'Действия')}</th></tr></thead>
             <tbody>
               {filtered.map(u => (
                 <tr key={u.id}>
@@ -65,19 +67,19 @@ export default function UsersPage() {
                   <td><span className={`badge ${u.role === 'admin' ? 'badge-danger' : u.role === 'doctor' ? 'badge-info' : 'badge-neutral'}`}>{roleLabel[u.role] || u.role}</span></td>
                   <td>
                     <span className={`badge ${u.is_active ? 'badge-success' : 'badge-neutral'}`}>
-                      {u.is_active ? 'Активен' : 'Неактивен'}
+                      {u.is_active ? t('adminUsers.active', 'Активен') : t('adminUsers.inactive', 'Неактивен')}
                     </span>
                   </td>
                   <td>
                     {u.is_active ? (
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeactivate(u.id)} style={{ color: 'var(--danger)' }}>Деактивировать</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeactivate(u.id)} style={{ color: 'var(--danger)' }}>{t('adminUsers.deactivate', 'Деактивировать')}</button>
                     ) : (
-                      <button className="btn btn-success btn-sm" onClick={() => handleActivate(u.id)}>Активировать</button>
+                      <button className="btn btn-success btn-sm" onClick={() => handleActivate(u.id)}>{t('adminUsers.activate', 'Активировать')}</button>
                     )}
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Нет пользователей</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>{t('adminUsers.empty', 'Нет пользователей')}</td></tr>}
             </tbody>
           </table>
         </div>

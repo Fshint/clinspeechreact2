@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { patientsAPI, organizationsAPI, appointmentsAPI } from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 
 export default function PatientsPage() {
   const { user } = useAuth();
+  const { t, formatDate } = useLocale();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,27 +34,27 @@ export default function PatientsPage() {
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
+  const titleCount = t('patients.subtitle', '{{count}} записей', { count: patients.length });
+
+  const loadPatients = useCallback(async (searchValue) => {
+    setLoading(true);
+    try {
+      const { data } = await patientsAPI.getAll({ search: searchValue || undefined });
+      setPatients(Array.isArray(data) ? data : (data?.results || []));
+    } catch { } finally { setLoading(false); }
+  }, []);
 
   useEffect(() => {
-    loadPatients();
     organizationsAPI.getAll().then(({ data }) => {
       const items = Array.isArray(data) ? data : (data?.results || []);
       setOrgs(items);
     }).catch(() => {});
   }, []);
 
-  const loadPatients = async () => {
-    setLoading(true);
-    try {
-      const { data } = await patientsAPI.getAll({ search: search || undefined });
-      setPatients(Array.isArray(data) ? data : (data?.results || []));
-    } catch { } finally { setLoading(false); }
-  };
-
   useEffect(() => {
-    const timer = setTimeout(loadPatients, 300);
+    const timer = setTimeout(() => loadPatients(search), 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, loadPatients]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -62,19 +64,19 @@ export default function PatientsPage() {
       await patientsAPI.create(form);
       setShowCreate(false);
       setForm({ first_name: '', last_name: '', middle_name: '', birth_date: '', organization: '' });
-      loadPatients();
+      loadPatients(search);
     } catch (err) {
       const d = err.response?.data;
-      setError(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Ошибка создания');
+      setError(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('patients.createError', 'Ошибка создания'));
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Удалить пациента?')) return;
+    if (!window.confirm(t('patients.deleteConfirm', 'Удалить пациента?'))) return;
     try {
       await patientsAPI.delete(id);
-      loadPatients();
-    } catch { alert('Ошибка удаления'); }
+      loadPatients(search);
+    } catch { alert(t('patients.deleteError', 'Ошибка удаления')); }
   };
 
   const loadHistory = async (patientId) => {
@@ -91,8 +93,8 @@ export default function PatientsPage() {
       const msg = serverMsg
         ? `${serverMsg}`
         : httpCode
-        ? `Ошибка ${httpCode}: не удалось загрузить историю`
-        : 'Сервер недоступен. Проверьте подключение.';
+        ? `${t('common.error', 'Ошибка')} ${httpCode}: ${t('patients.loadHistoryError', 'не удалось загрузить историю')}`
+        : t('patients.loadHistoryError', 'Сервер недоступен. Проверьте подключение.');
       setHistoryError(msg);
     } finally {
       setHistoryLoading(false);
@@ -109,7 +111,7 @@ export default function PatientsPage() {
       const { data } = await patientsAPI.getPatientUsers();
       setPatientUsers(Array.isArray(data) ? data : []);
     } catch {
-      setFromUserError('Не удалось загрузить список пользователей');
+      setFromUserError(t('patients.addFromUsersError', 'Не удалось загрузить список пользователей'));
     } finally {
       setPatientUsersLoading(false);
     }
@@ -127,10 +129,10 @@ export default function PatientsPage() {
         organization: fromUserForm.organization || undefined,
       });
       setShowFromUser(false);
-      loadPatients();
+      loadPatients(search);
     } catch (err) {
       const d = err.response?.data;
-      setFromUserError(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Ошибка добавления');
+      setFromUserError(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('patients.addError', 'Ошибка добавления'));
     } finally {
       setFromUserSaving(false);
     }
@@ -159,7 +161,7 @@ export default function PatientsPage() {
       setTimeout(() => setShowSchedule(null), 1200);
     } catch (err) {
       const d = err.response?.data;
-      setScheduleError(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Ошибка записи');
+      setScheduleError(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('patients.scheduleError', 'Ошибка записи'));
     } finally {
       setScheduleSaving(false);
     }
@@ -169,18 +171,18 @@ export default function PatientsPage() {
     <div className="animate-fade">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Пациенты</h1>
-          <p className="page-subtitle">{patients.length} записей</p>
+          <h1 className="page-title">{t('patients.title', 'Пациенты')}</h1>
+          <p className="page-subtitle">{titleCount}</p>
         </div>
         {(user?.role === 'doctor' || user?.role === 'admin') && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-secondary" onClick={openFromUserModal}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              Из пользователей
+              {t('patients.fromUsers', 'Из пользователей')}
             </button>
             <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-              Добавить пациента
+              {t('patients.newPatient', 'Добавить пациента')}
             </button>
           </div>
         )}
@@ -189,17 +191,17 @@ export default function PatientsPage() {
       <div className="filter-bar">
         <div className="search-bar" style={{ flex: 1, maxWidth: 400 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input className="input" placeholder="Поиск по ФИО..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
+          <input className="input" placeholder={t('patients.searchPlaceholder', 'Поиск по ФИО...')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
         </div>
       </div>
 
       {loading ? <div className="loading-spinner" /> : patients.length === 0 ? (
-        <div className="card empty-state"><h3>Нет пациентов</h3><p>Добавьте первого пациента</p></div>
+        <div className="card empty-state"><h3>{t('patients.emptyTitle', 'Нет пациентов')}</h3><p>{t('patients.emptySubtitle', 'Добавьте первого пациента')}</p></div>
       ) : (
         <div className="card table-wrapper">
           <table>
             <thead>
-              <tr><th>ФИО</th><th>Дата рождения</th><th>Организация</th><th>Действия</th></tr>
+              <tr><th>{t('patients.tableName', 'ФИО')}</th><th>{t('patients.tableBirthDate', 'Дата рождения')}</th><th>{t('patients.tableOrganization', 'Организация')}</th><th>{t('patients.tableActions', 'Действия')}</th></tr>
             </thead>
             <tbody>
               {patients.map((p) => (
@@ -214,13 +216,13 @@ export default function PatientsPage() {
                           className="btn btn-ghost btn-sm"
                           style={{ color: 'var(--primary)' }}
                           onClick={() => openSchedule(p)}
-                          title="Записать на приём"
+                          title={t('patients.addToAppointment', 'Записать на приём')}
                         >
-                          📅 Записать
+                          {t('patients.appointmentAction', '📅 Записать')}
                         </button>
                       )}
-                      <button className="btn btn-ghost btn-sm" onClick={() => loadHistory(p.id)}>История</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Удалить</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => loadHistory(p.id)}>{t('patients.history', 'История')}</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>{t('patients.delete', 'Удалить')}</button>
                     </div>
                   </td>
                 </tr>
@@ -234,39 +236,39 @@ export default function PatientsPage() {
       {showCreate && (
         <div className="modal-overlay" onClick={() => setShowCreate(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>Новый пациент</h3><button className="btn btn-ghost btn-icon" onClick={() => setShowCreate(false)}>✕</button></div>
+            <div className="modal-header"><h3>{t('patients.createTitle', 'Новый пациент')}</h3><button className="btn btn-ghost btn-icon" onClick={() => setShowCreate(false)}>✕</button></div>
             <form onSubmit={handleCreate}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {error && <div className="auth-error">{error}</div>}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="input-group">
-                    <label className="input-label">Фамилия *</label>
+                    <label className="input-label">{t('profile.lastName', 'Фамилия')} *</label>
                     <input className="input" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
                   </div>
                   <div className="input-group">
-                    <label className="input-label">Имя *</label>
+                    <label className="input-label">{t('profile.firstName', 'Имя')} *</label>
                     <input className="input" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
                   </div>
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Отчество</label>
+                  <label className="input-label">{t('profile.middleName', 'Отчество')}</label>
                   <input className="input" value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Дата рождения *</label>
+                  <label className="input-label">{t('patients.birthDate', 'Дата рождения *')}</label>
                   <input className="input" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Организация *</label>
+                  <label className="input-label">{t('patients.organization', 'Организация *')}</label>
                   <select className="input" value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} required>
-                    <option value="">Выберите...</option>
+                    <option value="">{t('appointments.choose', 'Выберите...')}</option>
                     {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>Отмена</button>
-                <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Создание...' : 'Создать'}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>{t('common.cancel', 'Отмена')}</button>
+                <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? t('patients.createLoading', 'Создание...') : t('common.create', 'Создать')}</button>
               </div>
             </form>
           </div>
@@ -278,19 +280,19 @@ export default function PatientsPage() {
         <div className="modal-overlay" onClick={() => setShowFromUser(false)}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Добавить пациента из пользователей</h3>
+              <h3>{t('patients.fromUserTitle', 'Добавить пациента из пользователей')}</h3>
               <button className="btn btn-ghost btn-icon" onClick={() => setShowFromUser(false)}>✕</button>
             </div>
             <form onSubmit={handleFromUser}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {fromUserError && <div className="auth-error">{fromUserError}</div>}
                 <div className="input-group">
-                  <label className="input-label">Выберите пользователя с ролью «Пациент» *</label>
+                  <label className="input-label">{t('patients.chooseDoctorPatient', 'Выберите пользователя с ролью «Пациент» *')}</label>
                   {patientUsersLoading ? (
                     <div className="loading-spinner" style={{ margin: '8px 0' }} />
                   ) : patientUsers.length === 0 ? (
                     <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                      Нет пользователей с ролью «Пациент» без профиля
+                      {t('patients.noUsersWithoutProfile', 'Нет пользователей с ролью «Пациент» без профиля')}
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
@@ -332,7 +334,7 @@ export default function PatientsPage() {
                   )}
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Дата рождения *</label>
+                  <label className="input-label">{t('patients.birthDate', 'Дата рождения *')}</label>
                   <input
                     className="input"
                     type="date"
@@ -342,25 +344,25 @@ export default function PatientsPage() {
                   />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Организация</label>
+                  <label className="input-label">{t('patients.organization', 'Организация')}</label>
                   <select
                     className="input"
                     value={fromUserForm.organization}
                     onChange={(e) => setFromUserForm({ ...fromUserForm, organization: e.target.value })}
                   >
-                    <option value="">Организация врача (по умолчанию)</option>
+                    <option value="">{t('patients.organizationDefault', 'Организация врача (по умолчанию)')}</option>
                     {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowFromUser(false)}>Отмена</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowFromUser(false)}>{t('common.cancel', 'Отмена')}</button>
                 <button
                   className="btn btn-primary"
                   type="submit"
                   disabled={fromUserSaving || !selectedUser || !fromUserForm.birth_date}
                 >
-                  {fromUserSaving ? 'Добавление...' : 'Добавить'}
+                  {fromUserSaving ? t('patients.addLoading', 'Добавление...') : t('common.add', 'Добавить')}
                 </button>
               </div>
             </form>
@@ -373,7 +375,7 @@ export default function PatientsPage() {
         <div className="modal-overlay" onClick={() => setShowSchedule(null)}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Записать на приём</h3>
+              <h3>{t('patients.scheduleTitle', 'Записать на приём')}</h3>
               <button className="btn btn-ghost btn-icon" onClick={() => setShowSchedule(null)}>✕</button>
             </div>
             <form onSubmit={handleSchedule}>
@@ -381,16 +383,16 @@ export default function PatientsPage() {
                 {scheduleError && <div className="auth-error">{scheduleError}</div>}
                 {scheduleSuccess && (
                   <div style={{ background: 'var(--success-bg, #f0fdf4)', color: 'var(--success, #16a34a)', padding: '10px 14px', borderRadius: 8, fontWeight: 500 }}>
-                    ✓ Приём успешно записан!
+                    {t('patients.scheduleSuccess', '✓ Приём успешно записан!')}
                   </div>
                 )}
                 <div style={{ padding: '10px 14px', background: 'var(--bg-secondary, #f8fafc)', borderRadius: 8, fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>Пациент:</span>{' '}
+                  <span style={{ fontWeight: 600 }}>{t('patients.patientLabel', 'Пациент:')}</span>{' '}
                   {showSchedule.last_name} {showSchedule.first_name} {showSchedule.middle_name || ''}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="input-group">
-                    <label className="input-label">Дата *</label>
+                    <label className="input-label">{t('appointments.date', 'Дата *')}</label>
                     <input
                       className="input"
                       type="date"
@@ -401,7 +403,7 @@ export default function PatientsPage() {
                     />
                   </div>
                   <div className="input-group">
-                    <label className="input-label">Время *</label>
+                    <label className="input-label">{t('appointments.time', 'Время *')}</label>
                     <input
                       className="input"
                       type="time"
@@ -412,16 +414,16 @@ export default function PatientsPage() {
                   </div>
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Причина визита</label>
+                  <label className="input-label">{t('patients.reason', 'Причина визита')}</label>
                   <input
                     className="input"
-                    placeholder="Например: первичный осмотр, жалобы на головные боли..."
+                    placeholder={t('patients.reasonPlaceholder', 'Например: первичный осмотр, жалобы на головные боли...')}
                     value={scheduleForm.reason}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, reason: e.target.value })}
                   />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Заметки</label>
+                  <label className="input-label">{t('patients.notes', 'Заметки')}</label>
                   <textarea
                     className="input"
                     rows={2}
@@ -431,13 +433,13 @@ export default function PatientsPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowSchedule(null)}>Отмена</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowSchedule(null)}>{t('common.cancel', 'Отмена')}</button>
                 <button
                   className="btn btn-primary"
                   type="submit"
                   disabled={scheduleSaving || !scheduleForm.date || !scheduleForm.time || scheduleSuccess}
                 >
-                  {scheduleSaving ? 'Запись...' : '📅 Записать на приём'}
+                  {scheduleSaving ? t('patients.scheduleLoading', 'Запись...') : t('patients.addToAppointment', '📅 Записать на приём')}
                 </button>
               </div>
             </form>
@@ -450,7 +452,7 @@ export default function PatientsPage() {
         <div className="modal-overlay" onClick={() => setShowHistory(null)}>
           <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>История болезни{history ? `: ${history.patient_name}` : ''}</h3>
+              <h3>{t('patients.historyTitle', 'История болезни{{name}}', { name: history ? `: ${history.patient_name}` : '' })}</h3>
               <button className="btn btn-ghost btn-icon" onClick={() => setShowHistory(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -461,20 +463,20 @@ export default function PatientsPage() {
               {history && (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
-                    Дата рождения: {history.birth_date || '—'} · Всего консультаций: {history.total_consultations}
+                    {t('patients.historyBirthDate', 'Дата рождения')}: {history.birth_date || t('common.none', '—')} · {t('patients.historyTotalConsultations', 'Всего консультаций')}: {history.total_consultations}
                   </p>
                   {history.consultations?.length === 0 ? (
-                    <div className="empty-state"><p>Нет консультаций</p></div>
+                    <div className="empty-state"><p>{t('patients.historyNoConsultations', 'Нет консультаций')}</p></div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {history.consultations?.map((c) => (
                         <div key={c.id} className="card" style={{ padding: 12, cursor: 'pointer' }} onClick={() => { setShowHistory(null); window.location.href = `/consultations/${c.id}`; }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                              <div style={{ fontSize: 14, fontWeight: 500 }}>{new Date(c.created_at).toLocaleDateString('ru-RU')}</div>
-                              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.doctor_name} · {c.diagnosis || 'Без диагноза'}</div>
+                              <div style={{ fontSize: 14, fontWeight: 500 }}>{formatDate(c.created_at)}</div>
+                              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.doctor_name} · {c.diagnosis || t('patients.diagnosisEmpty', 'Без диагноза')}</div>
                             </div>
-                            <span className={`badge ${c.status === 'ready' ? 'badge-success' : 'badge-neutral'}`}>{c.has_pdf ? '📄 PDF' : c.status}</span>
+                            <span className={`badge ${c.status === 'ready' ? 'badge-success' : 'badge-neutral'}`}>{c.has_pdf ? t('patients.historyPdf', '📄 PDF') : c.status}</span>
                           </div>
                         </div>
                       ))}

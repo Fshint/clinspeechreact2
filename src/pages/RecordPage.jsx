@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { patientsAPI, consultationsAPI } from '../api/apiClient';
 import logoImg from '../assets/Main_Button.png';
+import { useLocale } from '../context/LocaleContext';
 
 export default function RecordPage() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [patients, setPatients] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(true);
   const [patientId, setPatientId] = useState('');
@@ -22,7 +24,6 @@ export default function RecordPage() {
   const mediaRef = useRef(null);
   const timerRef = useRef(null);
   const chunksRef = useRef([]);
-  const canvasRef = useRef(null);
   const analyserRef = useRef(null);
   const animRef = useRef(null);
   const audioRef = useRef(null);
@@ -38,11 +39,15 @@ export default function RecordPage() {
     patientsAPI.getAll().then(({ data }) => {
       setPatients(Array.isArray(data) ? data : (data?.results || []));
     }).finally(() => setLoadingPatients(false));
+    const currentWaveAnim = waveAnimRef.current;
+    const currentEqAnim = eqAnimRef.current;
+    const currentAnim = animRef.current;
+    const currentTimer = timerRef.current;
     return () => {
-      cancelAnimationFrame(animRef.current);
-      cancelAnimationFrame(eqAnimRef.current);
-      cancelAnimationFrame(waveAnimRef.current);
-      clearInterval(timerRef.current);
+      cancelAnimationFrame(currentAnim);
+      cancelAnimationFrame(currentEqAnim);
+      cancelAnimationFrame(currentWaveAnim);
+      clearInterval(currentTimer);
     };
   }, []);
 
@@ -111,7 +116,8 @@ export default function RecordPage() {
     if (step === 2 && !audioBlob) {
       drawWaves();
     }
-    return () => cancelAnimationFrame(waveAnimRef.current);
+    const currentWaveAnim = waveAnimRef.current;
+    return () => cancelAnimationFrame(currentWaveAnim);
   }, [step, audioBlob, drawWaves]);
 
   const startRecording = async () => {
@@ -144,7 +150,7 @@ export default function RecordPage() {
       setDuration(0);
       timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
     } catch (err) {
-      setError('Не удалось получить доступ к микрофону.');
+      setError(t('record.microphoneError', 'Не удалось получить доступ к микрофону.'));
     }
   };
 
@@ -234,10 +240,13 @@ export default function RecordPage() {
     }
   };
 
-  const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatDuration = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   const handleSubmit = async () => {
-    if (!audioBlob || !patientId) return;
+    if (!audioBlob || !patientId) {
+      setError(t('record.selectPatientRequired', 'Выберите пациента для начала'));
+      return;
+    }
     setUploading(true);
     setError('');
     try {
@@ -251,7 +260,7 @@ export default function RecordPage() {
       navigate(`/consultations/${data.id}`);
     } catch (err) {
       const d = err.response?.data;
-      setError(typeof d === 'object' ? JSON.stringify(d) : 'Ошибка создания консультации');
+      setError(typeof d === 'object' ? JSON.stringify(d) : t('record.errorCreate', 'Ошибка создания консультации'));
     } finally { setUploading(false); }
   };
 
@@ -271,31 +280,31 @@ export default function RecordPage() {
       {step === 1 && (
         <div className="shazam-step1">
           <div className="page-header">
-            <div><h1 className="page-title">Новая запись</h1><p className="page-subtitle">Выберите пациента для начала</p></div>
+            <div><h1 className="page-title">{t('record.title', 'Новая запись')}</h1><p className="page-subtitle">{t('record.subtitle', 'Выберите пациента для начала')}</p></div>
           </div>
           {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
           <div className="shazam-patient-card">
             <div className="input-group" style={{ marginBottom: 16 }}>
-              <input className="input" placeholder="Поиск по ФИО..." value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
+              <input className="input" placeholder={t('record.patientSearch', 'Поиск по ФИО...')} value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
             </div>
             <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {loadingPatients ? (
-                <div className="shazam-loading">Пожалуйста, подождите...</div>
+                <div className="shazam-loading">{t('record.loadingPatients', 'Пожалуйста, подождите...')}</div>
               ) : filteredPatients.length > 0 ? (
                 filteredPatients.map(p => (
                   <div key={p.id}
                     className={`shazam-patient-item ${patientId === String(p.id) ? 'selected' : ''}`}
                     onClick={() => setPatientId(String(p.id))}>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{p.last_name} {p.first_name} {p.middle_name || ''}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Дата рождения: {p.birth_date || '—'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('patients.birthDate', 'Дата рождения')}: {p.birth_date || t('common.none', '—')}</div>
                   </div>
                 ))
               ) : (
-                <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Пациенты не найдены</p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>{t('record.patientsNotFound', 'Пациенты не найдены')}</p>
               )}
             </div>
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>Далее →</button>
+              <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>{t('record.next', 'Далее →')}</button>
             </div>
           </div>
         </div>
@@ -307,7 +316,7 @@ export default function RecordPage() {
           {!audioBlob ? (
             <>
               {/* Timer */}
-              <div className="shazam-timer">{formatTime(duration)}</div>
+              <div className="shazam-timer">{formatDuration(duration)}</div>
 
               {/* Center logo button with sphere visualizer */}
               <div className="shazam-center">
@@ -324,11 +333,11 @@ export default function RecordPage() {
                   onClick={!recording ? startRecording : undefined}
                   disabled={recording}
                 >
-                  <img src={logoImg} alt="Record" />
+                  <img src={logoImg} alt={t('record.title', 'Новая запись')} />
                 </button>
               </div>
 
-              <p className="shazam-hint">{recording ? (paused ? 'На паузе' : 'Идёт запись...') : 'Нажмите для начала записи'}</p>
+                <p className="shazam-hint">{recording ? (paused ? t('record.paused', 'На паузе') : t('record.recording', 'Идёт запись...')) : t('record.startRecordingHint', 'Нажмите для начала записи')}</p>
 
               {/* Bottom controls */}
               {recording && (
@@ -339,11 +348,11 @@ export default function RecordPage() {
                     ) : (
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
                     )}
-                    <span>{paused ? 'Продолжить' : 'Пауза'}</span>
+                    <span>{paused ? t('record.resume', 'Продолжить') : t('record.pause', 'Пауза')}</span>
                   </button>
                   <button className="shazam-ctrl-btn stop" onClick={stopRecording}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                    <span>Остановить</span>
+                    <span>{t('record.stop', 'Остановить')}</span>
                   </button>
                 </div>
               )}
@@ -351,7 +360,7 @@ export default function RecordPage() {
           ) : (
             /* ── After recording: playback + equalizer ── */
             <div className="shazam-playback">
-              <div className="shazam-timer">{formatTime(duration)}</div>
+              <div className="shazam-timer">{formatDuration(duration)}</div>
 
               <canvas ref={eqCanvasRef} width={320} height={100} className="shazam-eq-canvas" />
 
@@ -372,22 +381,22 @@ export default function RecordPage() {
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
                   </button>
                 )}
-              </div>
+                </div>
 
-              <div className="shazam-controls">
-                <button className="shazam-ctrl-btn" onClick={reset}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                  <span>Перезаписать</span>
-                </button>
-                <button className="shazam-ctrl-btn" style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }} onClick={() => setStep(3)}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  <span>Далее</span>
-                </button>
+                <div className="shazam-controls">
+                  <button className="shazam-ctrl-btn" onClick={reset}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <span>{t('record.reRecord', 'Перезаписать')}</span>
+                  </button>
+                  <button className="shazam-ctrl-btn" style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }} onClick={() => setStep(3)}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <span>{t('record.nextStep', 'Далее')}</span>
+                  </button>
+                </div>
               </div>
-            </div>
           )}
 
-          <button className="shazam-back-btn" onClick={() => { stopRecording(); reset(); setStep(1); }}>← Назад</button>
+          <button className="shazam-back-btn" onClick={() => { stopRecording(); reset(); setStep(1); }}>{t('record.back', '← Назад')}</button>
         </div>
       )}
 
@@ -395,28 +404,28 @@ export default function RecordPage() {
       {step === 3 && (
         <div className="shazam-step1">
           <div className="page-header">
-            <div><h1 className="page-title">Подтверждение</h1></div>
+            <div><h1 className="page-title">{t('record.confirmation', 'Подтверждение')}</h1></div>
           </div>
           {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
           <div className="shazam-patient-card">
             <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
               <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Пациент</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.patient', 'Пациент')}</div>
                 <div style={{ fontWeight: 500, color: 'var(--text)' }}>{(() => { const p = patients.find(p => String(p.id) === patientId); return p ? `${p.last_name} ${p.first_name}` : '—'; })()}</div>
               </div>
               <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Длительность записи</div>
-                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{formatTime(duration)}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.duration', 'Длительность записи')}</div>
+                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{formatDuration(duration)}</div>
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 14, cursor: 'pointer', marginBottom: 24, color: 'var(--text-secondary)' }}>
               <input type="checkbox" checked={autoProcess} onChange={(e) => setAutoProcess(e.target.checked)} />
-              Автоматически запустить ИИ-обработку
+              {t('record.autoProcess', 'Автоматически запустить ИИ-обработку')}
             </label>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-              <button className="btn btn-secondary" onClick={() => setStep(2)}>← Назад</button>
+              <button className="btn btn-secondary" onClick={() => setStep(2)}>{t('record.back', '← Назад')}</button>
               <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={uploading}>
-                {uploading ? 'Создание...' : '🚀 Создать консультацию'}
+                {uploading ? t('record.createLoading', 'Создание...') : t('record.createConsultation', '🚀 Создать консультацию')}
               </button>
             </div>
           </div>

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api/apiClient';
+import { useLocale } from '../../context/LocaleContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, loginWithCode } = useAuth();
+  const { t } = useLocale();
   const [mode, setMode] = useState('password'); // 'password' | 'otp'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,41 +21,41 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    try {
-      await login(username, password);
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Неверные учётные данные');
-    } finally {
-      setLoading(false);
-    }
+      try {
+        await login(username, password);
+        navigate('/dashboard', { replace: true });
+      } catch (err) {
+        setError(err.response?.data?.detail || t('auth.invalidCredentials', 'Неверные учётные данные'));
+      } finally {
+        setLoading(false);
+      }
   };
 
   const handleSendCode = async () => {
     setError('');
     setLoading(true);
-    try {
-      await authAPI.sendCode(email);
-      setCodeSent(true);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Ошибка отправки кода');
-    } finally {
-      setLoading(false);
-    }
+      try {
+        await authAPI.sendCode(email);
+        setCodeSent(true);
+      } catch (err) {
+        setError(err.response?.data?.error || t('auth.sendCodeError', 'Ошибка отправки кода'));
+      } finally {
+        setLoading(false);
+      }
   };
 
   const handleOtpLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    try {
-      await loginWithCode(email, code);
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err.response?.data?.error || 'Неверный код');
-    } finally {
-      setLoading(false);
-    }
+      try {
+        await loginWithCode(email, code);
+        navigate('/dashboard', { replace: true });
+      } catch (err) {
+        setError(err.response?.data?.error || t('auth.wrongCode', 'Неверный код'));
+      } finally {
+        setLoading(false);
+      }
   };
 
   return (
@@ -67,7 +69,7 @@ export default function LoginPage() {
       <div className="auth-card animate-slideup">
         <div className="auth-logo">
           <h1>ClinSpeech</h1>
-          <p>Вход в систему</p>
+          <p>{t('auth.loginTitle', 'Вход в систему')}</p>
         </div>
 
         {error && <div className="auth-error">{error}</div>}
@@ -78,52 +80,52 @@ export default function LoginPage() {
             onClick={() => { setMode('password'); setError(''); }}
             style={{ flex: 1 }}
           >
-            По паролю
+            {t('auth.loginPasswordTab', 'По паролю')}
           </button>
           <button
             className={`tab ${mode === 'otp' ? 'active' : ''}`}
             onClick={() => { setMode('otp'); setError(''); }}
             style={{ flex: 1 }}
           >
-            По email-коду
+            {t('auth.loginCodeTab', 'По email-коду')}
           </button>
         </div>
 
         {mode === 'password' ? (
           <form className="auth-form" onSubmit={handlePasswordLogin}>
             <div className="input-group">
-              <label className="input-label">Имя пользователя</label>
-              <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" required />
+              <label className="input-label">{t('auth.username', 'Имя пользователя')}</label>
+              <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t('auth.usernamePlaceholder', 'Имя пользователя')} required />
             </div>
             <div className="input-group">
-              <label className="input-label">Пароль</label>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+              <label className="input-label">{t('auth.password', 'Пароль')}</label>
+              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder', '••••••••')} required />
             </div>
             <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-              {loading ? 'Вход...' : 'Войти'}
+              {loading ? t('auth.signingIn', 'Вход...') : t('auth.signIn', 'Войти')}
             </button>
           </form>
         ) : (
           <form className="auth-form" onSubmit={handleOtpLogin}>
             <div className="input-group">
-              <label className="input-label">Email</label>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="doctor@clinic.com" required />
+              <label className="input-label">{t('auth.email', 'Email')}</label>
+              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.doctorEmailPlaceholder', 'doctor@clinic.kz')} required />
             </div>
             {!codeSent ? (
               <button className="btn btn-primary btn-lg" type="button" onClick={handleSendCode} disabled={loading || !email} style={{ width: '100%', justifyContent: 'center' }}>
-                {loading ? 'Отправка...' : 'Отправить код'}
+                {loading ? t('auth.sendingCode', 'Отправка...') : t('auth.sendCode', 'Отправить код')}
               </button>
             ) : (
               <>
                 <div className="input-group">
-                  <label className="input-label">6-значный код</label>
+                  <label className="input-label">{t('auth.code', '6-значный код')}</label>
                   <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" maxLength={6} required />
                 </div>
                 <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-                  {loading ? 'Вход...' : 'Подтвердить'}
+                  {loading ? t('auth.signingIn', 'Вход...') : t('auth.confirm', 'Подтвердить')}
                 </button>
                 <button className="btn btn-ghost btn-sm" type="button" onClick={() => setCodeSent(false)} style={{ alignSelf: 'center' }}>
-                  Отправить код заново
+                  {t('auth.resendCode', 'Отправить код заново')}
                 </button>
               </>
             )}
@@ -131,7 +133,7 @@ export default function LoginPage() {
         )}
 
         <div className="auth-footer">
-          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+          {t('auth.noAccount', 'Нет аккаунта?')} <Link to="/register">{t('auth.registerAction', 'Зарегистрироваться')}</Link>
         </div>
       </div>
     </div>
