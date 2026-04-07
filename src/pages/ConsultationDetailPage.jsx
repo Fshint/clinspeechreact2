@@ -29,7 +29,6 @@ export default function ConsultationDetailPage() {
     diagnosis: t('consultationDetail.fieldDiagnosis', 'Диагноз'),
     recommendations: t('consultationDetail.fieldRecommendations', 'Рекомендации'),
   };
-
   const load = useCallback(async () => {
     try {
       const { data: c } = await consultationsAPI.getById(id);
@@ -161,6 +160,7 @@ export default function ConsultationDetailPage() {
           <div className="detail-info-item"><label>{t('consultationDetail.date', 'Дата')}</label><span>{formatDate(data.created_at)}</span></div>
           <div className="detail-info-item"><label>{t('consultationDetail.images', 'Снимков')}</label><span>{data.images_count || 0}</span></div>
         </div>
+
       </div>
 
       {/* Processing animation */}
