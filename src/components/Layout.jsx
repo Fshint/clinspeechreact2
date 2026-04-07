@@ -75,9 +75,11 @@ export default function Layout() {
 
         <div className="sidebar-section">
           <div className="sidebar-section-label">{t('layout.main', 'Основное')}</div>
-          <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            {icons.dashboard} {t('layout.dashboard', 'Дэшборд')}
-          </NavLink>
+          {!isPatient && (
+            <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              {icons.dashboard} {t('layout.dashboard', 'Дэшборд')}
+            </NavLink>
+          )}
           {(isDoctor || isAdmin) && (
             <NavLink to="/record" className="sidebar-link" >
               {icons.mic} {t('layout.newConsultation', 'Новый приём')}

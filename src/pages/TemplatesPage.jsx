@@ -73,7 +73,25 @@ export default function TemplatesPage() {
 
       {loading ? <div className="loading-spinner" /> : templates.length === 0 ? (
         <div className="card empty-state">
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2ec4b6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+              <path d="M6 2h9l5 4v15a4 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+              <line x1="9" y1="9" x2="15" y2="9"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+              <line x1="9" y1="17" x2="15" y2="17"/>
+            </svg>
+          </div>
+
           <h3>{t('templates.emptyTitle', 'Нет шаблонов')}</h3>
           <p>{t('templates.emptySubtitle', 'Создайте шаблон для автоматического форматирования отчётов')}</p>
         </div>

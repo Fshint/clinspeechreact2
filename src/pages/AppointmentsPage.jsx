@@ -113,7 +113,7 @@ export default function AppointmentsPage() {
               <div>
                 <div style={{ fontWeight: 500 }}>{a.patient_name || t('appointments.appointmentLabel', 'Пациент #{{id}}', { id: a.patient })}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-                  📅 {formatDate(a.scheduled_at)} {t('common.at', 'в')} {formatTime(a.scheduled_at)}
+                  {formatDate(a.scheduled_at)} {t('common.at', 'в')} {formatTime(a.scheduled_at)}
                   {a.notes && <span> · {a.notes}</span>}
                 </div>
               </div>

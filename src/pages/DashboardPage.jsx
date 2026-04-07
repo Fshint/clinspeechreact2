@@ -94,7 +94,7 @@ export default function DashboardPage() {
           </div>
           <div className="card stat-card">
             <div className="stat-card-icon" style={{ background: '#fae8ff', color: '#a855f7' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div className="stat-card-value">{stats.total_patients}</div>
             <div className="stat-card-label">{t('dashboard.patients', 'Пациентов')}</div>

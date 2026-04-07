@@ -48,6 +48,33 @@ function ShieldIcon() {
   );
 }
 
+function getChatErrorMessage(error, t, fallbackMessage) {
+  const status = error.response?.status;
+  const serverMessage = error.response?.data?.error || error.response?.data?.detail;
+
+  if (status === 401) {
+    return serverMessage || t('chat.authError', 'Сессия истекла или нет доступа к чату.');
+  }
+
+  if (status === 403) {
+    return serverMessage || t('chat.forbiddenError', 'Чат доступен только пациентам.');
+  }
+
+  if (status === 404) {
+    return t('chat.notFoundError', 'Сервис чата недоступен. Обратитесь к администратору.');
+  }
+
+  if (status >= 500) {
+    return t('chat.serverError', 'Сервер временно недоступен. Попробуйте позже.');
+  }
+
+  if (!error.response) {
+    return t('chat.networkError', 'Не удалось соединиться с сервером. Проверьте подключение.');
+  }
+
+  return serverMessage || fallbackMessage;
+}
+
 export default function ChatPage() {
   const { user } = useAuth();
   const { t, formatTime } = useLocale();
@@ -74,14 +101,13 @@ export default function ChatPage() {
       setMessages(Array.isArray(messageList) ? messageList : []);
     } catch (error) {
       console.error('Ошибка загрузки истории чата:', error);
-      const status = error.response?.status;
-      if (status === 401) {
-        setRequestError(t('chat.historyLoadError401', 'Не удалось загрузить чат: сессия истекла или нет доступа к ассистенту.'));
-      } else if (status >= 500) {
-        setRequestError(t('chat.historyLoadError500', 'Сервер не смог загрузить историю чата. Попробуйте позже.'));
-      } else {
-        setRequestError(t('chat.historyLoadError', 'Не удалось загрузить историю чата. Проверьте подключение.'));
-      }
+      setRequestError(
+        getChatErrorMessage(
+          error,
+          t,
+          t('chat.historyLoadError', 'Не удалось загрузить историю чата.')
+        )
+      );
     } finally {
       setInitialLoading(false);
     }
@@ -126,14 +152,13 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Ошибка отправки сообщения:', error);
       setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
-      const status = error.response?.status;
-      if (status === 401) {
-        setRequestError(t('chat.sendError401', 'Сообщение не отправлено: сессия истекла или нет доступа к чату.'));
-      } else if (status >= 500) {
-        setRequestError(t('chat.sendError500', 'Серверная ошибка при отправке сообщения. Это проблема backend, не интерфейса.'));
-      } else {
-        setRequestError(t('chat.sendError', 'Не удалось отправить сообщение. Проверьте подключение.'));
-      }
+      setRequestError(
+        getChatErrorMessage(
+          error,
+          t,
+          t('chat.sendError', 'Не удалось отправить сообщение.')
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -154,14 +179,13 @@ export default function ChatPage() {
       setInput('');
     } catch (error) {
       console.error('Ошибка очистки истории чата:', error);
-      const status = error.response?.status;
-      if (status === 401) {
-        setRequestError(t('chat.clearError401', 'Не удалось очистить чат: сессия истекла или нет доступа.'));
-      } else if (status >= 500) {
-        setRequestError(t('chat.clearError500', 'Серверная ошибка при очистке истории чата. Попробуйте позже.'));
-      } else {
-        setRequestError(t('chat.clearError', 'Не удалось очистить историю чата. Проверьте подключение.'));
-      }
+      setRequestError(
+        getChatErrorMessage(
+          error,
+          t,
+          t('chat.clearError', 'Не удалось очистить историю чата.')
+        )
+      );
     } finally {
       setClearing(false);
     }
@@ -227,8 +251,11 @@ export default function ChatPage() {
       <div className="chat-grid">
         <aside className="card chat-summary animate-slideup">
           <div className="chat-summary-hero">
-            <div className="chat-summary-icon">
-              <AssistantIcon />
+            <div className="animated-bg" aria-hidden="true">
+              <span className="blob blob1" />
+              <span className="blob blob2" />
+              <span className="blob blob3" />
+              <span className="blob blob4" />
             </div>
             <div className="chat-summary-copy">
               <div className="chat-summary-eyebrow">{t('chat.heroEyebrow', 'Медицинский ассистент')}</div>
@@ -237,20 +264,7 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="chat-summary-stats">
-            <div className="chat-stat">
-              <div className="chat-stat-label">{t('chat.messages', 'Сообщений')}</div>
-              <div className="chat-stat-value">{messages.length}</div>
-            </div>
-            <div className="chat-stat">
-              <div className="chat-stat-label">{t('chat.state', 'Состояние')}</div>
-              <div className="chat-stat-value">{t('chat.online', 'Онлайн')}</div>
-            </div>
-            <div className="chat-stat">
-              <div className="chat-stat-label">{t('chat.focus', 'Фокус')}</div>
-              <div className="chat-stat-value">{t('chat.history', 'История')}</div>
-            </div>
-          </div>
+         
 
           <div className="chat-summary-section">
             <div className="chat-summary-title">{t('chat.quickPrompts', 'Быстрые запросы')}</div>

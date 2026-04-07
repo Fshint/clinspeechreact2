@@ -20,17 +20,23 @@ import ProfilePage from './pages/ProfilePage';
 import ChatPage from './pages/ChatPage';
 import UsersPage from './pages/admin/UsersPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
+import { getHomeRoute } from './utils/navigation';
 
 function DoctorAdminRoute({ children }) {
   const { user } = useAuth();
-  if (user?.role === 'patient') return <Navigate to="/dashboard" replace />;
+  if (user?.role === 'patient') return <Navigate to={getHomeRoute(user?.role)} replace />;
   return children;
 }
 
 function PatientRoute({ children }) {
   const { user } = useAuth();
-  if (user?.role !== 'patient') return <Navigate to="/dashboard" replace />;
+  if (user?.role !== 'patient') return <Navigate to={getHomeRoute(user?.role)} replace />;
   return children;
+}
+
+function AppHomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={getHomeRoute(user?.role)} replace />;
 }
 
 export default function App() {
@@ -44,7 +50,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<DoctorAdminRoute><DashboardPage /></DoctorAdminRoute>} />
               <Route path="/record" element={<DoctorAdminRoute><RecordPage /></DoctorAdminRoute>} />
               <Route path="/consultations" element={<ConsultationsPage />} />
               <Route path="/consultations/:id" element={<ConsultationDetailPage />} />
@@ -57,7 +63,7 @@ export default function App() {
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/audit" element={<AuditLogPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<AppHomeRedirect />} />
           </Routes>
         </Router>
       </AuthProvider>

@@ -52,7 +52,7 @@ export default function RecordPage() {
   }, []);
 
   const filteredPatients = patients.filter(p =>
-    `${p.last_name} ${p.first_name} ${p.middle_name || ''}`.toLowerCase().includes(patientSearch.toLowerCase())
+      `${p.last_name} ${p.first_name} ${p.middle_name || ''}`.toLowerCase().includes(patientSearch.toLowerCase())
   );
 
   /* ── NCS-style circular sphere visualizer ── */
@@ -91,8 +91,8 @@ export default function RecordPage() {
         for (let i = 0; i <= pts; i++) {
           const a = (i / pts) * Math.PI * 2;
           let p = Math.sin(a * l.fm + phase) * l.amp
-                + Math.sin(a * l.fm * 2.3 + phase * 1.4) * (l.amp * 0.4)
-                + Math.cos(a * l.fm * 0.7 + phase * 0.6) * (l.amp * 0.3);
+              + Math.sin(a * l.fm * 2.3 + phase * 1.4) * (l.amp * 0.4)
+              + Math.cos(a * l.fm * 0.7 + phase * 0.6) * (l.amp * 0.3);
           if (freqData) {
             const fi = Math.floor((i / pts) * freqData.length) % freqData.length;
             p += (freqData[fi] / 255) * 35;
@@ -274,163 +274,163 @@ export default function RecordPage() {
   };
 
   return (
-    <div className="shazam-page animate-fade">
+      <div className="shazam-page animate-fade">
 
-      {/* ── Step 1: Patient select ── */}
-      {step === 1 && (
-        <div className="shazam-step1">
-          <div className="page-header">
-            <div><h1 className="page-title">{t('record.title', 'Новая запись')}</h1><p className="page-subtitle">{t('record.subtitle', 'Выберите пациента для начала')}</p></div>
-          </div>
-          {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
-          <div className="shazam-patient-card">
-            <div className="input-group" style={{ marginBottom: 16 }}>
-              <input className="input" placeholder={t('record.patientSearch', 'Поиск по ФИО...')} value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
+        {/* ── Step 1: Patient select ── */}
+        {step === 1 && (
+            <div className="shazam-step1">
+              <div className="page-header">
+                <div><h1 className="page-title">{t('record.title', 'Новая запись')}</h1><p className="page-subtitle">{t('record.subtitle', 'Выберите пациента для начала')}</p></div>
+              </div>
+              {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
+              <div className="shazam-patient-card">
+                <div className="input-group" style={{ marginBottom: 16 }}>
+                  <input className="input" placeholder={t('record.patientSearch', 'Поиск по ФИО...')} value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
+                </div>
+                <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {loadingPatients ? (
+                      <div className="shazam-loading">{t('record.loadingPatients', 'Пожалуйста, подождите...')}</div>
+                  ) : filteredPatients.length > 0 ? (
+                      filteredPatients.map(p => (
+                          <div key={p.id}
+                               className={`shazam-patient-item ${patientId === String(p.id) ? 'selected' : ''}`}
+                               onClick={() => setPatientId(String(p.id))}>
+                            <div style={{ fontWeight: 500, fontSize: 14 }}>{p.last_name} {p.first_name} {p.middle_name || ''}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('patients.birthDate', 'Дата рождения')}: {p.birth_date || t('common.none', '—')}</div>
+                          </div>
+                      ))
+                  ) : (
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>{t('record.patientsNotFound', 'Пациенты не найдены')}</p>
+                  )}
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>{t('record.next', 'Далее →')}</button>
+                </div>
+              </div>
             </div>
-            <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {loadingPatients ? (
-                <div className="shazam-loading">{t('record.loadingPatients', 'Пожалуйста, подождите...')}</div>
-              ) : filteredPatients.length > 0 ? (
-                filteredPatients.map(p => (
-                  <div key={p.id}
-                    className={`shazam-patient-item ${patientId === String(p.id) ? 'selected' : ''}`}
-                    onClick={() => setPatientId(String(p.id))}>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{p.last_name} {p.first_name} {p.middle_name || ''}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('patients.birthDate', 'Дата рождения')}: {p.birth_date || t('common.none', '—')}</div>
-                  </div>
-                ))
-              ) : (
-                <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>{t('record.patientsNotFound', 'Пациенты не найдены')}</p>
-              )}
-            </div>
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn btn-primary" disabled={!patientId} onClick={() => setStep(2)}>{t('record.next', 'Далее →')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Step 2: Recording ── */}
-      {step === 2 && (
-        <div className="shazam-record">
-          {!audioBlob ? (
-            <>
-              {/* Timer */}
-              <div className="shazam-timer">{formatDuration(duration)}</div>
-
-              {/* Center logo button with sphere visualizer */}
-              <div className="shazam-center">
-                <canvas ref={waveCvsRef} width={400} height={400} className="shazam-sphere-canvas" />
-                {recording && (
+        {/* ── Step 2: Recording ── */}
+        {step === 2 && (
+            <div className="shazam-record">
+              {!audioBlob ? (
                   <>
-                    <span className="shazam-ring shazam-ring1"></span>
-                    <span className="shazam-ring shazam-ring2"></span>
-                    <span className="shazam-ring shazam-ring3"></span>
-                  </>
-                )}
-                <button
-                  className={`shazam-logo-btn ${recording ? 'recording' : ''}`}
-                  onClick={!recording ? startRecording : undefined}
-                  disabled={recording}
-                >
-                  <img src={logoImg} alt={t('record.title', 'Новая запись')} />
-                </button>
-              </div>
+                    {/* Timer */}
+                    <div className="shazam-timer">{formatDuration(duration)}</div>
 
-                <p className="shazam-hint">{recording ? (paused ? t('record.paused', 'На паузе') : t('record.recording', 'Идёт запись...')) : t('record.startRecordingHint', 'Нажмите для начала записи')}</p>
+                    {/* Center logo button with sphere visualizer */}
+                    <div className="shazam-center">
+                      <canvas ref={waveCvsRef} width={400} height={400} className="shazam-sphere-canvas" />
+                      {recording && (
+                          <>
+                            <span className="shazam-ring shazam-ring1"></span>
+                            <span className="shazam-ring shazam-ring2"></span>
+                            <span className="shazam-ring shazam-ring3"></span>
+                          </>
+                      )}
+                      <button
+                          className={`shazam-logo-btn ${recording ? 'recording' : ''}`}
+                          onClick={!recording ? startRecording : undefined}
+                          disabled={recording}
+                      >
+                        <img src={logoImg} alt={t('record.title', 'Новая запись')} />
+                      </button>
+                    </div>
 
-              {/* Bottom controls */}
-              {recording && (
-                <div className="shazam-controls">
-                  <button className="shazam-ctrl-btn" onClick={paused ? resumeRecording : pauseRecording}>
-                    {paused ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    ) : (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    <p className="shazam-hint">{recording ? (paused ? t('record.paused', 'На паузе') : t('record.recording', 'Идёт запись...')) : t('record.startRecordingHint', 'Нажмите для начала записи')}</p>
+
+                    {/* Bottom controls */}
+                    {recording && (
+                        <div className="shazam-controls">
+                          <button className="shazam-ctrl-btn" onClick={paused ? resumeRecording : pauseRecording}>
+                            {paused ? (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            ) : (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                            )}
+                            <span>{paused ? t('record.resume', 'Продолжить') : t('record.pause', 'Пауза')}</span>
+                          </button>
+                          <button className="shazam-ctrl-btn stop" onClick={stopRecording}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            <span>{t('record.stop', 'Остановить')}</span>
+                          </button>
+                        </div>
                     )}
-                    <span>{paused ? t('record.resume', 'Продолжить') : t('record.pause', 'Пауза')}</span>
-                  </button>
-                  <button className="shazam-ctrl-btn stop" onClick={stopRecording}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                    <span>{t('record.stop', 'Остановить')}</span>
-                  </button>
-                </div>
+                  </>
+              ) : (
+                  /* ── After recording: playback + equalizer ── */
+                  <div className="shazam-playback">
+                    <div className="shazam-timer">{formatDuration(duration)}</div>
+
+                    <canvas ref={eqCanvasRef} width={320} height={100} className="shazam-eq-canvas" />
+
+                    <audio
+                        ref={audioRef}
+                        src={audioUrl}
+                        onEnded={() => { setIsPlaying(false); cancelAnimationFrame(eqAnimRef.current); }}
+                        style={{ display: 'none' }}
+                    />
+
+                    <div className="shazam-play-controls">
+                      {!isPlaying ? (
+                          <button className="shazam-play-btn" onClick={handlePlay}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          </button>
+                      ) : (
+                          <button className="shazam-play-btn" onClick={handlePause}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                          </button>
+                      )}
+                    </div>
+
+                    <div className="shazam-controls">
+                      <button className="shazam-ctrl-btn" onClick={reset}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        <span>{t('record.reRecord', 'Перезаписать')}</span>
+                      </button>
+                      <button className="shazam-ctrl-btn" style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }} onClick={() => setStep(3)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        <span>{t('record.nextStep', 'Далее')}</span>
+                      </button>
+                    </div>
+                  </div>
               )}
-            </>
-          ) : (
-            /* ── After recording: playback + equalizer ── */
-            <div className="shazam-playback">
-              <div className="shazam-timer">{formatDuration(duration)}</div>
 
-              <canvas ref={eqCanvasRef} width={320} height={100} className="shazam-eq-canvas" />
+              <button className="shazam-back-btn" onClick={() => { stopRecording(); reset(); setStep(1); }}>{t('record.back', '← Назад')}</button>
+            </div>
+        )}
 
-              <audio
-                ref={audioRef}
-                src={audioUrl}
-                onEnded={() => { setIsPlaying(false); cancelAnimationFrame(eqAnimRef.current); }}
-                style={{ display: 'none' }}
-              />
-
-              <div className="shazam-play-controls">
-                {!isPlaying ? (
-                  <button className="shazam-play-btn" onClick={handlePlay}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  </button>
-                ) : (
-                  <button className="shazam-play-btn" onClick={handlePause}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                  </button>
-                )}
+        {/* ── Step 3: Submit ── */}
+        {step === 3 && (
+            <div className="shazam-step1">
+              <div className="page-header">
+                <div><h1 className="page-title">{t('record.confirmation', 'Подтверждение')}</h1></div>
+              </div>
+              {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
+              <div className="shazam-patient-card">
+                <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+                  <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.patient', 'Пациент')}</div>
+                    <div style={{ fontWeight: 500, color: 'var(--text)' }}>{(() => { const p = patients.find(p => String(p.id) === patientId); return p ? `${p.last_name} ${p.first_name}` : '—'; })()}</div>
+                  </div>
+                  <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.duration', 'Длительность записи')}</div>
+                    <div style={{ fontWeight: 500, color: 'var(--text)' }}>{formatDuration(duration)}</div>
+                  </div>
                 </div>
-
-                <div className="shazam-controls">
-                  <button className="shazam-ctrl-btn" onClick={reset}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    <span>{t('record.reRecord', 'Перезаписать')}</span>
-                  </button>
-                  <button className="shazam-ctrl-btn" style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }} onClick={() => setStep(3)}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    <span>{t('record.nextStep', 'Далее')}</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 14, cursor: 'pointer', marginBottom: 24, color: 'var(--text-secondary)' }}>
+                  <input type="checkbox" checked={autoProcess} onChange={(e) => setAutoProcess(e.target.checked)} />
+                  {t('record.autoProcess', 'Автоматически запустить ИИ-обработку')}
+                </label>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+                  <button className="btn btn-secondary" onClick={() => setStep(2)}>{t('record.back', '← Назад')}</button>
+                  <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={uploading}>
+                    {uploading ? t('record.createLoading', 'Создание...') : t('record.createConsultation', '🚀 Создать консультацию')}
                   </button>
                 </div>
               </div>
-          )}
-
-          <button className="shazam-back-btn" onClick={() => { stopRecording(); reset(); setStep(1); }}>{t('record.back', '← Назад')}</button>
-        </div>
-      )}
-
-      {/* ── Step 3: Submit ── */}
-      {step === 3 && (
-        <div className="shazam-step1">
-          <div className="page-header">
-            <div><h1 className="page-title">{t('record.confirmation', 'Подтверждение')}</h1></div>
-          </div>
-          {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
-          <div className="shazam-patient-card">
-            <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
-              <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.patient', 'Пациент')}</div>
-                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{(() => { const p = patients.find(p => String(p.id) === patientId); return p ? `${p.last_name} ${p.first_name}` : '—'; })()}</div>
-              </div>
-              <div style={{ padding: 12, background: 'var(--border-light)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('record.duration', 'Длительность записи')}</div>
-                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{formatDuration(duration)}</div>
-              </div>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 14, cursor: 'pointer', marginBottom: 24, color: 'var(--text-secondary)' }}>
-              <input type="checkbox" checked={autoProcess} onChange={(e) => setAutoProcess(e.target.checked)} />
-              {t('record.autoProcess', 'Автоматически запустить ИИ-обработку')}
-            </label>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-              <button className="btn btn-secondary" onClick={() => setStep(2)}>{t('record.back', '← Назад')}</button>
-              <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={uploading}>
-                {uploading ? t('record.createLoading', 'Создание...') : t('record.createConsultation', '🚀 Создать консультацию')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
   );
 }

@@ -196,8 +196,8 @@ table tbody tr:hover { background: var(--border-light); }
 
 .app-language-switcher {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  bottom: 16px;
+  right: 8px;
   z-index: 1200;
 }
 
@@ -379,7 +379,7 @@ table tbody tr:hover { background: var(--border-light); }
 .shazam-eq-canvas {
   width: 320px; height: 100px; margin-bottom: 24px; border-radius: var(--radius);
 }
-.shazam-play-controls { margin-bottom: 16px; z-index: 2; }
+.shazam-play-controls { margin-bottom: 16px; z-index: 2; bottom: 78px; position: relative; }
 .shazam-play-btn {
   width: 64px; height: 64px; border-radius: 50%; border: none;
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -594,10 +594,10 @@ table tbody tr:hover { background: var(--border-light); }
   color: var(--text-secondary);
 }
 @media (max-width: 640px) {
-  .app-language-switcher { top: 12px; right: 12px; }
+  .app-language-switcher { bottom: 12px; right: 12px; }
   .locale-switcher {
     gap: 10px;
-    padding: 8px 10px;
+    padding: 4px 4px;
   }
   .locale-switcher__button {
     min-width: 60px;
@@ -624,9 +624,9 @@ table tbody tr:hover { background: var(--border-light); }
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  gap: 16px;
+  gap: 20px;
   align-items: stretch;
 }
 
@@ -685,24 +685,18 @@ table tbody tr:hover { background: var(--border-light); }
   overflow: hidden;
 }
 
-.chat-summary { display: flex; flex-direction: column; }
+.chat-summary {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+}
 
 .chat-summary-hero {
   position: relative;
   padding: 24px;
   color: #fff;
-  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 55%, #0f172a 140%);
+  background: linear-gradient(135deg, var(--primary) 0%, #2ec4b6 55%, #0f172a 140%);
   overflow: hidden;
-}
-
-.chat-summary-hero::after {
-  content: '';
-  position: absolute;
-  inset: auto -50px -55px auto;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.08);
 }
 
 .chat-summary-icon {
@@ -767,7 +761,11 @@ table tbody tr:hover { background: var(--border-light); }
   line-height: 1.5;
 }
 
-.chat-thread { display: flex; flex-direction: column; }
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 
 .chat-thread-header {
   padding: 18px 22px;
@@ -1097,6 +1095,7 @@ table tbody tr:hover { background: var(--border-light); }
   left:0;
   z-index:0;
   filter: blur(120px);
+  pointer-events: none;
 }
 
 .blob{
@@ -1155,4 +1154,3 @@ table tbody tr:hover { background: var(--border-light); }
     transform:translate(0,0) scale(1);
   }
 }
-

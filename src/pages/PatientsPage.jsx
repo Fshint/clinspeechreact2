@@ -218,7 +218,7 @@ export default function PatientsPage() {
                           onClick={() => openSchedule(p)}
                           title={t('patients.addToAppointment', 'Записать на приём')}
                         >
-                          {t('patients.appointmentAction', '📅 Записать')}
+                          {t('patients.appointmentAction', 'Записать')}
                         </button>
                       )}
                       <button className="btn btn-ghost btn-sm" onClick={() => loadHistory(p.id)}>{t('patients.history', 'История')}</button>

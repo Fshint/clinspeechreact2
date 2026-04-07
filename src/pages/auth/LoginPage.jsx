@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api/apiClient';
 import { useLocale } from '../../context/LocaleContext';
+import { getHomeRoute } from '../../utils/navigation';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
       try {
-        await login(username, password);
-        navigate('/dashboard', { replace: true });
+        const data = await login(username, password);
+        navigate(getHomeRoute(data.role), { replace: true });
       } catch (err) {
         setError(err.response?.data?.detail || t('auth.invalidCredentials', 'Неверные учётные данные'));
       } finally {
@@ -49,8 +50,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
       try {
-        await loginWithCode(email, code);
-        navigate('/dashboard', { replace: true });
+        const data = await loginWithCode(email, code);
+        navigate(getHomeRoute(data.role), { replace: true });
       } catch (err) {
         setError(err.response?.data?.error || t('auth.wrongCode', 'Неверный код'));
       } finally {
