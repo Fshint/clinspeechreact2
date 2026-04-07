@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { consultationsAPI, imagesAPI } from '../api/apiClient';
+import { consultationsAPI, imagesAPI, templatesAPI } from '../api/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 
@@ -16,6 +16,11 @@ export default function ConsultationDetailPage() {
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState('report');
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [applyingTemplateId, setApplyingTemplateId] = useState(null);
+  const canUseTemplates = user?.role === 'doctor' || user?.role === 'admin';
   const statusLabels = {
     created: t('statuses.created', 'Создано'),
     processing: t('statuses.processing', 'Обработка'),
@@ -43,7 +48,33 @@ export default function ConsultationDetailPage() {
     }
   }, [id]);
 
+  const loadTemplates = useCallback(async () => {
+    if (!canUseTemplates) {
+      setTemplates([]);
+      setTemplatesError('');
+      return;
+    }
+
+    setTemplatesLoading(true);
+    setTemplatesError('');
+    try {
+      const { data } = await templatesAPI.getAll();
+      setTemplates(Array.isArray(data) ? data : (data?.results || []));
+    } catch (err) {
+      console.error(err);
+      setTemplates([]);
+      setTemplatesError(t('consultationDetail.templatesLoadError', 'Не удалось загрузить шаблоны'));
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, [canUseTemplates, t]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (canUseTemplates) {
+      loadTemplates();
+    }
+  }, [canUseTemplates, loadTemplates]);
 
   // Poll for status updates
   useEffect(() => {
@@ -58,6 +89,31 @@ export default function ConsultationDetailPage() {
     }, 3000);
     return () => clearInterval(interval);
   }, [data, id]);
+
+  const handleApplyTemplate = async (template) => {
+    if (!window.confirm(t(
+      'consultationDetail.confirmApplyTemplate',
+      'Применить шаблон «{{name}}»? Текущий отчёт будет сохранён в истории.',
+      { name: template.name },
+    ))) {
+      return;
+    }
+
+    setApplyingTemplateId(template.id);
+    try {
+      const { data: response } = await templatesAPI.apply(template.id, id);
+      await load();
+      await loadTemplates();
+      setTab('report');
+      if (response?.message) {
+        alert(response.message);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || t('consultationDetail.errorApplyTemplate', 'Ошибка применения шаблона'));
+    } finally {
+      setApplyingTemplateId(null);
+    }
+  };
 
   const handleSaveReport = async () => {
     setSaving(true);
@@ -177,6 +233,7 @@ export default function ConsultationDetailPage() {
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${tab === 'report' ? 'active' : ''}`} onClick={() => setTab('report')}>{t('consultationDetail.tabReport', 'Отчёт')}</button>
+        {canUseTemplates && <button className={`tab ${tab === 'templates' ? 'active' : ''}`} onClick={() => setTab('templates')}>{t('consultationDetail.tabTemplates', 'Шаблоны')}</button>}
         <button className={`tab ${tab === 'transcription' ? 'active' : ''}`} onClick={() => setTab('transcription')}>{t('consultationDetail.tabTranscription', 'Транскрипция')}</button>
         <button className={`tab ${tab === 'images' ? 'active' : ''}`} onClick={() => setTab('images')}>{t('consultationDetail.tabImages', 'Снимки')} ({data.analysis_images?.length || 0})</button>
         <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>{t('consultationDetail.tabHistory', 'История версий')}</button>
@@ -256,6 +313,56 @@ export default function ConsultationDetailPage() {
                   {(user?.role === 'doctor' || user?.role === 'admin') && (
                     <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteImage(img.id)} style={{ position: 'absolute', top: 8, right: 8, color: 'var(--danger)' }}>✕</button>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {canUseTemplates && tab === 'templates' && (
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{t('consultationDetail.templatesTitle', 'Шаблоны для отчёта')}</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
+              {t('consultationDetail.templatesHint', 'Выберите шаблон, чтобы заполнить отчёт. Текущий отчёт будет сохранён в истории.')}
+            </p>
+          </div>
+
+          {templatesLoading ? (
+            <div className="loading-spinner" />
+          ) : templatesError ? (
+            <div className="auth-error">{templatesError}</div>
+          ) : templates.length === 0 ? (
+            <div className="empty-state">
+              <h3>{t('consultationDetail.templatesEmptyTitle', 'Нет шаблонов')}</h3>
+              <p>{t('consultationDetail.templatesEmptyHint', 'Откройте раздел шаблонов, чтобы создать или включить публичные заготовки.')}</p>
+            </div>
+          ) : (
+            <div className="grid-3">
+              {templates.map((template) => (
+                <div key={template.id} className="card" style={{ padding: 20, border: '1px solid rgba(0,0,0,.06)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{template.name}</h4>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{template.specialty || t('common.none', '—')}</div>
+                    </div>
+                    {template.is_public && <span className="badge badge-info">{t('templates.public', 'Публичный')}</span>}
+                  </div>
+                  {template.description && (
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+                      {template.description}
+                    </p>
+                  )}
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleApplyTemplate(template)}
+                    disabled={applyingTemplateId === template.id}
+                  >
+                    {applyingTemplateId === template.id
+                      ? t('consultationDetail.applyingTemplate', 'Применение...')
+                      : t('consultationDetail.applyTemplate', 'Применить')}
+                  </button>
                 </div>
               ))}
             </div>
