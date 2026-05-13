@@ -123,7 +123,7 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="empty-state"><p>{t('dashboard.noDataPeriod', 'Нет данных за период')}</p></div>
+            <div className="empty-state"><p>{t('dashboard.noDataPeriod', 'Нет данных за период!')}</p></div>
           )}
         </div>
 
