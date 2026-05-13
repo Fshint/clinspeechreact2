@@ -10,23 +10,16 @@ export default function PatientsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [showFromUser, setShowFromUser] = useState(false);
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const [candidates, setCandidates] = useState([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState('');
+  const [candidateSaving, setCandidateSaving] = useState(null);
   const [showHistory, setShowHistory] = useState(null);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [orgs, setOrgs] = useState([]);
-  const [form, setForm] = useState({ first_name: '', last_name: '', middle_name: '', birth_date: '', organization: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  // From-user modal state
-  const [patientUsers, setPatientUsers] = useState([]);
-  const [patientUsersLoading, setPatientUsersLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [fromUserForm, setFromUserForm] = useState({ birth_date: '', organization: '' });
-  const [fromUserSaving, setFromUserSaving] = useState(false);
-  const [fromUserError, setFromUserError] = useState('');
 
   // Schedule appointment modal state
   const [showSchedule, setShowSchedule] = useState(null); // patient object
@@ -56,19 +49,81 @@ export default function PatientsPage() {
     return () => clearTimeout(timer);
   }, [search, loadPatients]);
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSaving(true);
+  const loadCandidates = useCallback(async (value = '') => {
+    setCandidatesLoading(true);
+    setCandidateError('');
     try {
-      await patientsAPI.create(form);
-      setShowCreate(false);
-      setForm({ first_name: '', last_name: '', middle_name: '', birth_date: '', organization: '' });
+      const { data } = await patientsAPI.searchCandidates({ search: value || undefined });
+      setCandidates(Array.isArray(data) ? data : (data?.results || []));
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || t('patients.candidatesError', 'Не удалось загрузить пациентов');
+      setCandidateError(String(msg));
+      setCandidates([]);
+    } finally {
+      setCandidatesLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (!showCreate) return undefined;
+    const timer = setTimeout(() => loadCandidates(candidateSearch), 250);
+    return () => clearTimeout(timer);
+  }, [showCreate, candidateSearch, loadCandidates]);
+
+  const openAddPatientSearch = () => {
+    setShowCreate(true);
+    setCandidateSearch('');
+    setCandidateError('');
+    setCandidates([]);
+  };
+
+  const closeAddPatientSearch = () => {
+    setShowCreate(false);
+    setCandidateSearch('');
+    setCandidateError('');
+    setCandidates([]);
+    setCandidateSaving(null);
+  };
+
+  const candidateName = (candidate) => {
+    const fullName = `${candidate.last_name || ''} ${candidate.first_name || ''} ${candidate.middle_name || ''}`.trim();
+    return fullName || candidate.username || candidate.email || t('patients.unknownPatient', 'Пациент');
+  };
+
+  const handleAddCandidate = async (candidate) => {
+    if (candidate.status === 'other_organization') {
+      window.alert(t(
+        'patients.otherOrganizationAlert',
+        'Пациент находится в другой организации: {{org}}',
+        { org: candidate.organization_name || '—' }
+      ));
+      return;
+    }
+    if (candidate.status === 'same_organization') {
+      window.alert(t('patients.sameOrganizationAlert', 'Пациент уже находится в вашей организации'));
+      return;
+    }
+    if (!candidate.can_add) {
+      window.alert(candidate.message || t('patients.cannotAddPatient', 'Пациента нельзя добавить'));
+      return;
+    }
+
+    const savingKey = String(candidate.id || candidate.user_id);
+    setCandidateSaving(savingKey);
+    try {
+      if (candidate.type === 'user_without_profile') {
+        await patientsAPI.fromUser({ user_id: candidate.user_id });
+      } else {
+        await patientsAPI.attach(candidate.patient_id || candidate.id);
+      }
+      closeAddPatientSearch();
       loadPatients(search);
     } catch (err) {
-      const d = err.response?.data;
-      setError(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('patients.createError', 'Ошибка создания'));
-    } finally { setSaving(false); }
+      const msg = err.response?.data?.error || err.response?.data?.detail || t('patients.addError', 'Ошибка добавления');
+      window.alert(String(msg));
+    } finally {
+      setCandidateSaving(null);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -98,43 +153,6 @@ export default function PatientsPage() {
       setHistoryError(msg);
     } finally {
       setHistoryLoading(false);
-    }
-  };
-
-  const openFromUserModal = async () => {
-    setShowFromUser(true);
-    setSelectedUser(null);
-    setFromUserForm({ birth_date: '', organization: '' });
-    setFromUserError('');
-    setPatientUsersLoading(true);
-    try {
-      const { data } = await patientsAPI.getPatientUsers();
-      setPatientUsers(Array.isArray(data) ? data : []);
-    } catch {
-      setFromUserError(t('patients.addFromUsersError', 'Не удалось загрузить список пользователей'));
-    } finally {
-      setPatientUsersLoading(false);
-    }
-  };
-
-  const handleFromUser = async (e) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    setFromUserError('');
-    setFromUserSaving(true);
-    try {
-      await patientsAPI.fromUser({
-        user_id: selectedUser.id,
-        birth_date: fromUserForm.birth_date,
-        organization: fromUserForm.organization || undefined,
-      });
-      setShowFromUser(false);
-      loadPatients(search);
-    } catch (err) {
-      const d = err.response?.data;
-      setFromUserError(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('patients.addError', 'Ошибка добавления'));
-    } finally {
-      setFromUserSaving(false);
     }
   };
 
@@ -176,11 +194,7 @@ export default function PatientsPage() {
         </div>
         {(user?.role === 'doctor' || user?.role === 'admin') && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-secondary" onClick={openFromUserModal}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              {t('patients.fromUsers', 'Из пользователей')}
-            </button>
-            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+            <button className="btn btn-primary" onClick={openAddPatientSearch}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
               {t('patients.newPatient', 'Добавить пациента')}
             </button>
@@ -234,138 +248,85 @@ export default function PatientsPage() {
 
       {/* Create modal */}
       {showCreate && (
-        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>{t('patients.createTitle', 'Новый пациент')}</h3><button className="btn btn-ghost btn-icon" onClick={() => setShowCreate(false)}>✕</button></div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {error && <div className="auth-error">{error}</div>}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="input-group">
-                    <label className="input-label">{t('profile.lastName', 'Фамилия')} *</label>
-                    <input className="input" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">{t('profile.firstName', 'Имя')} *</label>
-                    <input className="input" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
-                  </div>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">{t('profile.middleName', 'Отчество')}</label>
-                  <input className="input" value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">{t('patients.birthDate', 'Дата рождения *')}</label>
-                  <input className="input" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">{t('patients.organization', 'Организация *')}</label>
-                  <select className="input" value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} required>
-                    <option value="">{t('appointments.choose', 'Выберите...')}</option>
-                    {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowCreate(false)}>{t('common.cancel', 'Отмена')}</button>
-                <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? t('patients.createLoading', 'Создание...') : t('common.create', 'Создать')}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* From-user modal */}
-      {showFromUser && (
-        <div className="modal-overlay" onClick={() => setShowFromUser(false)}>
-          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={closeAddPatientSearch}>
+          <div className="modal" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{t('patients.fromUserTitle', 'Добавить пациента из пользователей')}</h3>
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowFromUser(false)}>✕</button>
+              <h3>{t('patients.addSearchTitle', 'Добавить пациента')}</h3>
+              <button className="btn btn-ghost btn-icon" onClick={closeAddPatientSearch}>✕</button>
             </div>
-            <form onSubmit={handleFromUser}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {fromUserError && <div className="auth-error">{fromUserError}</div>}
-                <div className="input-group">
-                  <label className="input-label">{t('patients.chooseDoctorPatient', 'Выберите пользователя с ролью «Пациент» *')}</label>
-                  {patientUsersLoading ? (
-                    <div className="loading-spinner" style={{ margin: '8px 0' }} />
-                  ) : patientUsers.length === 0 ? (
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                      {t('patients.noUsersWithoutProfile', 'Нет пользователей с ролью «Пациент» без профиля')}
-                    </p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
-                      {patientUsers.map((u) => (
-                        <label
-                          key={u.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '8px 12px',
-                            borderRadius: 8,
-                            cursor: 'pointer',
-                            border: selectedUser?.id === u.id
-                              ? '2px solid var(--primary)'
-                              : '1px solid var(--border)',
-                            background: selectedUser?.id === u.id ? 'var(--primary-light, #eef2ff)' : 'transparent',
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            name="patient_user"
-                            value={u.id}
-                            checked={selectedUser?.id === u.id}
-                            onChange={() => setSelectedUser(u)}
-                            style={{ accentColor: 'var(--primary)' }}
-                          />
-                          <div>
-                            <div style={{ fontWeight: 500, fontSize: 14 }}>
-                              {u.last_name} {u.first_name} {u.middle_name || ''}
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="input-group">
+                <label className="input-label">{t('patients.searchByName', 'Поиск пациента по ФИО')}</label>
+                <input
+                  className="input"
+                  value={candidateSearch}
+                  onChange={(e) => setCandidateSearch(e.target.value)}
+                  placeholder={t('patients.searchPlaceholder', 'Поиск по ФИО...')}
+                  autoFocus
+                />
+              </div>
+              {candidateError && <div className="auth-error">{candidateError}</div>}
+              {candidatesLoading ? (
+                <div className="loading-spinner" style={{ margin: '16px auto' }} />
+              ) : candidates.length === 0 ? (
+                <div className="empty-state" style={{ padding: 24 }}>
+                  <h3>{t('patients.notFound', 'Пациенты не найдены')}</h3>
+                  <p>{t('patients.searchHint', 'Попробуйте изменить ФИО или проверьте, зарегистрирован ли пациент')}</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 430, overflowY: 'auto' }}>
+                  {candidates.map((candidate) => {
+                    const key = String(candidate.id || candidate.user_id);
+                    const isOtherOrg = candidate.status === 'other_organization';
+                    const isSameOrg = candidate.status === 'same_organization';
+                    const isFree = candidate.status === 'free';
+                    return (
+                      <div
+                        key={`${candidate.type}-${key}`}
+                        className="card"
+                        style={{
+                          padding: 14,
+                          border: `1px solid ${isOtherOrg ? 'rgba(239,68,68,.35)' : isFree ? 'rgba(46,196,182,.35)' : 'var(--border-light)'}`,
+                          background: isOtherOrg ? 'rgba(254,242,242,.75)' : isFree ? 'rgba(240,253,250,.75)' : 'rgba(255,255,255,.9)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                              {candidateName(candidate)}
                             </div>
-                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                              {u.username} · {u.email}
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                              {candidate.email || candidate.username || '—'}
+                            </div>
+                            <div style={{ fontSize: 13, color: isOtherOrg ? 'var(--danger)' : 'var(--text-secondary)', marginTop: 6 }}>
+                              {isOtherOrg
+                                ? t('patients.otherOrganizationAlert', 'Пациент находится в другой организации: {{org}}', { org: candidate.organization_name || '—' })
+                                : isSameOrg
+                                ? t('patients.sameOrganizationAlert', 'Пациент уже находится в вашей организации')
+                                : t('patients.freePatient', 'Свободный пациент, можно добавить')}
                             </div>
                           </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                          <button
+                            className={`btn ${isFree ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                            disabled={candidateSaving === key}
+                            onClick={() => handleAddCandidate(candidate)}
+                          >
+                            {candidateSaving === key
+                              ? t('patients.adding', 'Добавление...')
+                              : isFree
+                              ? t('common.add', 'Добавить')
+                              : t('common.view', 'Проверить')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="input-group">
-                  <label className="input-label">{t('patients.birthDate', 'Дата рождения *')}</label>
-                  <input
-                    className="input"
-                    type="date"
-                    value={fromUserForm.birth_date}
-                    onChange={(e) => setFromUserForm({ ...fromUserForm, birth_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">{t('patients.organization', 'Организация')}</label>
-                  <select
-                    className="input"
-                    value={fromUserForm.organization}
-                    onChange={(e) => setFromUserForm({ ...fromUserForm, organization: e.target.value })}
-                  >
-                    <option value="">{t('patients.organizationDefault', 'Организация врача (по умолчанию)')}</option>
-                    {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" type="button" onClick={() => setShowFromUser(false)}>{t('common.cancel', 'Отмена')}</button>
-                <button
-                  className="btn btn-primary"
-                  type="submit"
-                  disabled={fromUserSaving || !selectedUser || !fromUserForm.birth_date}
-                >
-                  {fromUserSaving ? t('patients.addLoading', 'Добавление...') : t('common.add', 'Добавить')}
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" type="button" onClick={closeAddPatientSearch}>{t('common.cancel', 'Отмена')}</button>
+            </div>
           </div>
         </div>
       )}

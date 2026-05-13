@@ -104,6 +104,7 @@ export const patientsAPI = {
   attach: (patientId) => api.post('/patients/attach/', { patient_id: patientId }),
   getHistory: (id) => api.get(`/patients/${id}/history/`),
   getPatientUsers: () => api.get('/patients/patient_users/'),
+  searchCandidates: (params) => api.get('/patients/search_candidates/', { params }),
   fromUser: (data) => api.post('/patients/from_user/', data),
 };
 
